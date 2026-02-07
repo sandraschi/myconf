@@ -8,7 +8,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Stability Baseline:** Unified linting strategy across the monorepo. `apps/web` now passes with 0 warnings (`max-warnings 0`).
 
+### Fixed
+- **Linting & Type Safety:**
+  - Resolved 43 original linting warnings in the web application.
+  - Fixed `turbo/no-undeclared-env-vars` by registering `LIVEKIT_API_KEY`, `LIVEKIT_API_SECRET`, `OLLAMA_HOST`, `NODE_ENV`, `NEXT_PUBLIC_LIVEKIT_URL`, and `CI` in `turbo.json`.
+  - Escaped JSX entities (`&quot;`, `&apos;`) in `SettingsPage` and `HelpModal`.
+  - Fixed React hook dependencies and memoization (`useCallback`) in `app/test/page.tsx`.
+  - Removed unused variables and imports in `page.tsx`, `settings.test.ts`, and `ShareRoomModal.tsx`.
+  - Replaced literal constant binary expressions in `utils.test.ts` to satisfy logic verification rules.
+- **Implicit Any:** Hardened type definitions in `telemetry.ts` and LiveKit transcription handlers, replacing `any` with `unknown` and specific interfaces.
+
+### Added (Detailed)
+- **Full dockerization:** Agent runs in Docker; `docker compose up -d` runs livekit, redis, web (port 3000), and agent. Agent uses `OLLAMA_BASE_URL` (default `http://host.docker.internal:11434/v1`) and `OLLAMA_MODEL` (default `gemma2`). `apps/agent/Dockerfile` and `.dockerignore`; compose `extra_hosts` for Linux. See README and PRD Deployment.
 - **Roadmap (Phase 2.5):** Full self-host calendaring & invitations documented in PRD and README (event store, scheduling UI, invite emails via SMTP/Email MCP, MCP tools). See PRD.md.
 
 #### Web Application UI Overhaul

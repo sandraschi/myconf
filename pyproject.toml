@@ -1,0 +1,17 @@
+[project]
+name = "myconf"
+version = "0.1.0"
+description = "AG-Visio video conferencing with AI agent"
+readme = "README.md"
+requires-python = ">=3.10"
+
+[tool.ruff]
+target-version = "py310"
+line-length = 100
+src = ["apps/agent", "packages/mcp-server"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "W", "UP"]
+
+[tool.ruff.format]
+quote-style = "double"

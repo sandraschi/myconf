@@ -1,0 +1,57 @@
+# Full stack: livekit, redis, web, agent.
+# Ollama runs OUTSIDE Docker on your PC (start it yourself: ollama serve, ollama pull gemma2).
+# The agent container reaches the host's Ollama via OLLAMA_BASE_URL=http://host.docker.internal:11434/v1.
+# Optional: add an ollama service to compose and set agent OLLAMA_BASE_URL=http://ollama:11434/v1 for all-in-Docker.
+services:
+  livekit:
+    image: livekit/livekit-server:latest
+    command: --config /etc/livekit.yaml
+    volumes:
+      - ./livekit.yaml:/etc/livekit.yaml
+    ports:
+      - "15580:15580"
+      - "15581:15581"
+      - "15582:15582/udp"
+    restart: always
+
+  redis:
+    image: redis:7-alpine
+    command: redis-server --save 20 1
+    ports:
+      - "16379:6379"
+    restart: always
+
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+    ports:
+      - "15500:15500"
+    environment:
+      - NEXT_PUBLIC_LIVEKIT_URL=ws://localhost:15580
+      - LIVEKIT_API_KEY=devkey
+      - LIVEKIT_API_SECRET=secret
+      - HOSTNAME=0.0.0.0
+      - OLLAMA_HOST=http://host.docker.internal:11434
+      - PORT=15500
+    depends_on:
+      - livekit
+    restart: always
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  agent:
+    build:
+      context: ./apps/agent
+      dockerfile: Dockerfile
+    environment:
+      - LIVEKIT_URL=ws://livekit:15580
+      - LIVEKIT_API_KEY=devkey
+      - LIVEKIT_API_SECRET=secret
+      - OLLAMA_BASE_URL=http://host.docker.internal:11434/v1
+      - OLLAMA_MODEL=gemma2
+    depends_on:
+      - livekit
+    restart: always
+    extra_hosts:
+      - "host.docker.internal:host-gateway"

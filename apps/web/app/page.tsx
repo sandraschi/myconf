@@ -1,0 +1,553 @@
+"use client";
+
+import {
+  LiveKitRoom,
+  ParticipantTile,
+  ControlBar,
+  useTracks,
+  useRoomContext,
+} from "@livekit/components-react";
+import "@livekit/components-styles";
+import { Track, RoomEvent } from "livekit-client";
+import { useState, useEffect, useRef } from "react";
+import { Loader2 } from "lucide-react";
+import ErrorBoundary from "@/components/ErrorBoundary";
+import Topbar from "@/components/Topbar";
+import LogViewer from "@/components/LogViewer";
+import AgentStatus from "@/components/AgentStatus";
+import ReconnectionBanner from "@/components/ReconnectionBanner";
+import ChatPanel from "@/components/ChatPanel";
+import { telemetry } from "@/lib/telemetry";
+import { useSettings } from "@/lib/settings";
+import { useDiscovery } from "@/lib/discovery";
+import { usePreJoinValidation } from "@/lib/prejoin-validation";
+
+interface TranscriptEntry {
+  id: string;
+  timestamp: string;
+  speaker: string;
+  text: string;
+}
+
+export default function ModConsDashboard() {
+  const { settings, isLoaded } = useSettings();
+  const {
+    livekitUrl: discoveredUrl,
+    suggestedRooms,
+    rooms: discoveryRooms,
+    discoveryError,
+  } = useDiscovery(30000);
+  const [token, setToken] = useState<string | null>(null);
+  const [participantName, setParticipantName] = useState("");
+  const [currentRoom, setCurrentRoom] = useState(settings.defaultRoomName);
+  const [customRoomName, setCustomRoomName] = useState("");
+  const [useCustomRoom, setUseCustomRoom] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [isLogViewerOpen, setIsLogViewerOpen] = useState(false);
+  const [rightPanelTab, setRightPanelTab] = useState<"transcript" | "chat">("transcript");
+  const hasAppliedRoomParam = useRef(false);
+  const deviceValidation = usePreJoinValidation(settings);
+
+  const livekitUrl =
+    discoveredUrl ?? settings.livekitUrl ?? "ws://localhost:15580";
+
+  useEffect(() => {
+    setCurrentRoom(settings.defaultRoomName);
+  }, [settings.defaultRoomName]);
+
+  useEffect(() => {
+    if (hasAppliedRoomParam.current) return;
+    const params = new URLSearchParams(typeof window !== "undefined" ? window.location.search : "");
+    const roomParam = params.get("room");
+    if (roomParam) {
+      hasAppliedRoomParam.current = true;
+      const inSuggested = suggestedRooms.includes(roomParam);
+      if (inSuggested) setCurrentRoom(roomParam);
+      else {
+        setUseCustomRoom(true);
+        setCustomRoomName(roomParam);
+        setCurrentRoom(roomParam);
+      }
+    }
+  }, [suggestedRooms]);
+
+  useEffect(() => {
+    telemetry.log("DASHBOARD_MOUNTED");
+    return () => telemetry.log("DASHBOARD_UNMOUNTED");
+  }, []);
+
+  const effectiveRoom = useCustomRoom ? customRoomName.trim() : currentRoom;
+
+  const handleInit = async (roomToJoin?: string) => {
+    const room = roomToJoin ?? effectiveRoom;
+    if (!participantName.trim()) {
+      setError("Please enter your name");
+      return;
+    }
+    if (useCustomRoom && !customRoomName.trim()) {
+      setError("Please enter a room name");
+      return;
+    }
+    setError(null);
+    setIsLoading(true);
+    telemetry.log("MOD_CONS_INIT_REQUESTED", { participant: participantName, room: roomToJoin });
+
+    try {
+      const resp = await fetch("/api/token", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          roomName: room,
+          participantName: participantName.trim(),
+        }),
+      });
+      const data = await resp.json();
+      if (data.error) {
+        setError(data.error);
+        telemetry.log("TOKEN_FETCH_FAILED", { error: data.error });
+      } else if (data.token) {
+        setToken(data.token);
+        setCurrentRoom(room);
+        if (useCustomRoom) setUseCustomRoom(false);
+      }
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "Connection failed";
+      setError(msg);
+      telemetry.log("TOKEN_FETCH_FAILED", { error: msg });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleRoomChange = async (newRoom: string) => {
+    if (newRoom === currentRoom) return;
+
+    telemetry.log("ROOM_SWITCH_REQUESTED", { from: currentRoom, to: newRoom });
+    setToken(null); // Disconnect from current room
+    await handleInit(newRoom); // Reconnect to new room
+  };
+
+  const handleLogout = () => {
+    setToken(null);
+    setParticipantName("");
+    telemetry.log("USER_LOGOUT");
+  };
+
+  if (!isLoaded) {
+    return (
+      <div className="flex h-full items-center justify-center bg-neutral-950">
+        <Loader2 className="w-8 h-8 animate-spin text-gray-500" />
+      </div>
+    );
+  }
+
+  return (
+    <ErrorBoundary>
+      <div className="flex h-full flex-col bg-transparent">
+        {/* Topbar */}
+        <Topbar
+          userName={token ? participantName : undefined}
+          currentRoom={currentRoom}
+          isConnected={!!token}
+          onHelpClick={() => {
+            const event = new KeyboardEvent("keydown", { key: "?" });
+            document.dispatchEvent(event);
+          }}
+          onLoggerClick={() => setIsLogViewerOpen(true)}
+          onRoomChange={handleRoomChange}
+          onLogout={handleLogout}
+          availableRooms={
+            suggestedRooms.length > 0
+              ? [...new Set([currentRoom, ...suggestedRooms])]
+              : ["ag-visio-conference", "development", "testing", "demo"]
+          }
+          roomsWithCount={discoveryRooms}
+        />
+
+        <div className="dashboard-container">
+          {token ? (
+            <LiveKitRoom
+              video={
+                settings.preferredVideoInput
+                  ? { deviceId: { ideal: settings.preferredVideoInput } }
+                  : true
+              }
+              audio={
+                settings.preferredAudioInput
+                  ? { deviceId: { ideal: settings.preferredAudioInput } }
+                  : true
+              }
+              token={token}
+              serverUrl={livekitUrl}
+              onDisconnected={() => {
+                setToken(null);
+                telemetry.log("ROOM_DISCONNECTED");
+              }}
+              onConnected={() => telemetry.log("ROOM_CONNECTED", { room: currentRoom })}
+              onError={(e) => {
+                telemetry.log("ROOM_CONNECTION_FAILED", { error: e?.message });
+              }}
+              data-lk-theme="default"
+              style={{ height: "100%", width: "100%", display: "flex", flexDirection: "row" }}
+            >
+              <div className="relative flex-1 p-4 overflow-y-auto flex flex-col min-w-0">
+                <ReconnectionBanner />
+                <div className="flex items-center justify-between gap-2 mb-4">
+                  <AgentStatus />
+                </div>
+                <div className="flex-1 min-h-0">
+                  <ModConsGrid />
+                </div>
+                <div className="mt-4 p-2 glass-panel rounded-2xl">
+                  <ControlBar
+                    controls={{
+                      microphone: true,
+                      camera: true,
+                      screenShare: true,
+                      chat: false,
+                      leave: true,
+                    }}
+                    variation="verbose"
+                  />
+                </div>
+              </div>
+              {/* Right sidebar: Transcript + Chat */}
+              <aside className="w-80 border-l border-white/5 glass-panel flex flex-col shrink-0 m-2 rounded-2xl overflow-hidden">
+                <div className="flex border-b border-gray-800">
+                  <button
+                    type="button"
+                    onClick={() => setRightPanelTab("transcript")}
+                    className={`flex-1 px-4 py-3 text-xs font-semibold uppercase tracking-wider transition-colors ${rightPanelTab === "transcript"
+                      ? "bg-neutral-800 text-white border-b-2 border-blue-500"
+                      : "text-gray-500 hover:text-gray-300"
+                      }`}
+                  >
+                    Transcript
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setRightPanelTab("chat")}
+                    className={`flex-1 px-4 py-3 text-xs font-semibold uppercase tracking-wider transition-colors ${rightPanelTab === "chat"
+                      ? "bg-neutral-800 text-white border-b-2 border-blue-500"
+                      : "text-gray-500 hover:text-gray-300"
+                      }`}
+                  >
+                    Chat
+                  </button>
+                </div>
+                <div className="flex-1 min-h-0 overflow-hidden">
+                  {rightPanelTab === "transcript" ? (
+                    <div className="h-full p-4 overflow-hidden">
+                      <TranscriptionFeed />
+                    </div>
+                  ) : (
+                    <ChatPanel />
+                  )}
+                </div>
+              </aside>
+            </LiveKitRoom>
+          ) : (
+            <>
+              <div className="relative flex-1 p-4 flex items-center justify-center">
+                <div className="flex flex-col items-center gap-6 w-full max-w-md p-8 glass-panel rounded-3xl animate-glow">
+                  <div className="text-center">
+                    <h2 className="text-xl font-semibold text-white mb-2">
+                      Join Conference
+                    </h2>
+                    <p className="text-gray-500 text-sm">
+                      Enter your name to join the AG-Visio conference room
+                    </p>
+                  </div>
+
+                  <div className="w-full space-y-4">
+                    <div>
+                      <label className="block text-sm text-gray-400 mb-1">
+                        Room
+                      </label>
+                      <select
+                        value={useCustomRoom ? "__custom__" : currentRoom}
+                        onChange={(e) => {
+                          if (e.target.value === "__custom__") {
+                            setUseCustomRoom(true);
+                          } else {
+                            setUseCustomRoom(false);
+                            setCurrentRoom(e.target.value);
+                          }
+                        }}
+                        className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-accent-primary/50 transition-all"
+                      >
+                        {(
+                          suggestedRooms.length > 0
+                            ? [...new Set([currentRoom, ...suggestedRooms])]
+                            : ["ag-visio-conference", "development", "testing", "demo"]
+                        ).map(
+                          (room) => (
+                            <option key={room} value={room}>
+                              {room}
+                            </option>
+                          )
+                        )}
+                        <option value="__custom__">Create custom room...</option>
+                      </select>
+                      {useCustomRoom && (
+                        <input
+                          type="text"
+                          placeholder="Enter room name"
+                          value={customRoomName}
+                          onChange={(e) => setCustomRoomName(e.target.value)}
+                          className="mt-2 w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-accent-primary/50 transition-all"
+                          autoFocus
+                        />
+                      )}
+                    </div>
+                    <div>
+                      <label className="block text-sm text-gray-400 mb-1">
+                        Your Name
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="Enter your name"
+                        value={participantName}
+                        onChange={(e) => setParticipantName(e.target.value)}
+                        onKeyDown={(e) => e.key === "Enter" && handleInit()}
+                        className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-accent-primary/50 transition-all"
+                        disabled={isLoading}
+                        autoFocus
+                      />
+                    </div>
+
+                    <div className="text-xs text-gray-500 bg-neutral-800/50 rounded-lg p-3 space-y-1">
+                      <p>
+                        <strong className="text-gray-400">Server:</strong> {livekitUrl}
+                      </p>
+                      {discoveryError && (
+                        <p className="text-yellow-500">Using fallback (LiveKit unreachable)</p>
+                      )}
+                      <div className="flex items-center gap-3 mt-2">
+                        <span>
+                          Camera:{" "}
+                          {deviceValidation.camera === "ok" && (
+                            <span className="text-green-500">OK</span>
+                          )}
+                          {deviceValidation.camera === "fail" && (
+                            <span className="text-red-500">Fail</span>
+                          )}
+                          {deviceValidation.camera === "pending" && (
+                            <span className="text-gray-400">Checking...</span>
+                          )}
+                        </span>
+                        <span>
+                          Mic:{" "}
+                          {deviceValidation.microphone === "ok" && (
+                            <span className="text-green-500">OK</span>
+                          )}
+                          {deviceValidation.microphone === "fail" && (
+                            <span className="text-red-500">Fail</span>
+                          )}
+                          {deviceValidation.microphone === "pending" && (
+                            <span className="text-gray-400">Checking...</span>
+                          )}
+                        </span>
+                        {(deviceValidation.camera === "fail" ||
+                          deviceValidation.microphone === "fail") && (
+                            <button
+                              type="button"
+                              onClick={() => deviceValidation.revalidate()}
+                              className="text-blue-400 hover:text-blue-300"
+                            >
+                              Retry
+                            </button>
+                          )}
+                      </div>
+                      {deviceValidation.error && (
+                        <p className="text-red-400 mt-1">{deviceValidation.error}</p>
+                      )}
+                    </div>
+
+                    {error && (
+                      <div className="p-3 bg-red-900/30 border border-red-800 rounded-lg">
+                        <p className="text-red-400 text-sm">{error}</p>
+                      </div>
+                    )}
+
+                    <button
+                      onClick={() => handleInit()}
+                      disabled={isLoading}
+                      className="w-full px-6 py-3 bg-blue-600 rounded-lg hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 font-medium"
+                    >
+                      {isLoading ? (
+                        <>
+                          <Loader2 size={18} className="animate-spin" />
+                          Connecting...
+                        </>
+                      ) : (
+                        "Join Room"
+                      )}
+                    </button>
+
+                    <a
+                      href="/test"
+                      className="block w-full px-6 py-3 bg-neutral-800 rounded-lg hover:bg-neutral-700 transition text-center font-medium text-gray-300"
+                    >
+                      Test Camera & Audio
+                    </a>
+                  </div>
+
+                  <p className="text-xs text-gray-600">
+                    Press <kbd className="px-1.5 py-0.5 bg-neutral-700 rounded text-gray-400">?</kbd> for help
+                  </p>
+                </div>
+              </div>
+              <aside className="w-80 border-l border-gray-800 bg-neutral-900/50 flex flex-col items-center justify-center">
+                <p className="text-gray-500 text-sm text-center px-4">
+                  Join room to see<br />transcript and chat
+                </p>
+              </aside>
+            </>
+          )}
+        </div>
+
+        {/* Log Viewer Modal */}
+        <LogViewer isOpen={isLogViewerOpen} onClose={() => setIsLogViewerOpen(false)} />
+      </div>
+    </ErrorBoundary>
+  );
+}
+
+function ModConsGrid() {
+  const tracks = useTracks(
+    [
+      { source: Track.Source.Camera, withPlaceholder: true },
+      { source: Track.Source.ScreenShare, withPlaceholder: false },
+    ],
+    { onlySubscribed: false }
+  );
+
+  const screenShareTracks = tracks.filter(
+    (t) => t.source === Track.Source.ScreenShare
+  );
+  const cameraTracks = tracks.filter(
+    (t) => t.source === Track.Source.Camera
+  );
+
+  return (
+    <div className="flex flex-col gap-4 mb-4 h-full">
+      {screenShareTracks.length > 0 && (
+        <div className="flex-1 min-h-0">
+          <div className="grid grid-cols-1 gap-2 h-full">
+            {screenShareTracks.map((track) => (
+              <div
+                key={track.participant.identity + track.source}
+                className="flex-1 min-h-[200px] bg-neutral-900 rounded-lg overflow-hidden border-2 border-blue-500/50"
+              >
+                <ParticipantTile trackRef={track} />
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 shrink-0">
+        {cameraTracks.map((track) => (
+          <div
+            key={track.participant.identity + track.source}
+            className="aspect-video bg-neutral-900 rounded-lg overflow-hidden"
+          >
+            <ParticipantTile trackRef={track} />
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function TranscriptionFeed() {
+  const [transcripts, setTranscripts] = useState<TranscriptEntry[]>([]);
+  const room = useRoomContext();
+
+  useEffect(() => {
+    if (!room) return;
+
+    const handleData = (payload: Uint8Array, participant: { identity: string } | undefined) => {
+      try {
+        const text = new TextDecoder().decode(payload);
+        const data = JSON.parse(text);
+
+        if (data.type === "transcription" || data.transcript) {
+          const entry: TranscriptEntry = {
+            id: `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
+            timestamp: new Date().toLocaleTimeString("en-US", { hour12: false }),
+            speaker: data.speaker || participant?.identity || "Agent",
+            text: data.transcript || data.text || "",
+          };
+          setTranscripts((prev) => [...prev.slice(-49), entry]);
+          telemetry.log("TRANSCRIPTION_RECEIVED", { speaker: entry.speaker });
+        }
+      } catch {
+        // Non-JSON data, ignore
+      }
+    };
+
+    room.on(RoomEvent.DataReceived, handleData);
+    return () => {
+      room.off(RoomEvent.DataReceived, handleData);
+    };
+  }, [room]);
+
+  // Subscribe to participant metadata changes (agent may publish transcriptions there)
+  useEffect(() => {
+    if (!room) return;
+
+    const handleMetadata = (prevMetadata: string | undefined, participant: { identity: string; metadata?: string }) => {
+      try {
+        const meta = JSON.parse(participant.metadata || "{}");
+        if (meta.lastTranscript) {
+          const entry: TranscriptEntry = {
+            id: `meta-${Date.now()}`,
+            timestamp: new Date().toLocaleTimeString("en-US", { hour12: false }),
+            speaker: participant.identity,
+            text: meta.lastTranscript,
+          };
+          setTranscripts((prev) => {
+            // Avoid duplicates
+            if (prev.some((t) => t.text === entry.text && t.speaker === entry.speaker)) {
+              return prev;
+            }
+            return [...prev.slice(-49), entry];
+          });
+        }
+      } catch {
+        // Invalid metadata
+      }
+    };
+
+    room.on(RoomEvent.ParticipantMetadataChanged, handleMetadata);
+    return () => {
+      room.off(RoomEvent.ParticipantMetadataChanged, handleMetadata);
+    };
+  }, [room]);
+
+  if (transcripts.length === 0) {
+    return (
+      <div className="flex-1 space-y-2 overflow-y-auto">
+        <div className="text-blue-400 font-mono text-sm">[SYSTEM] Waiting for transcriptions...</div>
+        <div className="text-gray-500 font-mono text-sm opacity-50">
+          Monitoring for Ontological Drift...
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex-1 space-y-2 overflow-y-auto font-mono text-sm">
+      {transcripts.map((entry) => (
+        <div key={entry.id} className="border-l-2 border-gray-700 pl-2 py-1">
+          <span className="text-gray-500 text-[10px]">{entry.timestamp}</span>
+          <p className="text-white">
+            <span className="text-blue-400">{entry.speaker}:</span> {entry.text}
+          </p>
+        </div>
+      ))}
+    </div>
+  );
+}

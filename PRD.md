@@ -12,7 +12,7 @@ AG-Visio is a professional video conferencing platform combining real-time commu
 
 ### Key Differentiators
 - **AI Voice Agent** with natural language understanding and context awareness
-- **Professional UI** with comprehensive controls and settings
+- **Premium Glassmorphism UI** with Tailwind 4 and micro-animations
 - **Device Testing** before joining meetings
 - **Multi-room Support** with seamless switching
 - **Real-time Transcription** with speaker identification
@@ -126,7 +126,7 @@ Provide a privacy-respecting, self-hostable video conferencing solution with AI 
 ### 4. Settings System
 
 #### 4.1 Connection Settings
-- **LiveKit Server URL** (default: `ws://localhost:7880`)
+- **LiveKit Server URL** (default: `ws://localhost:15580`)
 - **Default Room Name** (default: `ag-visio-conference`)
 
 #### 4.2 Device Settings
@@ -246,9 +246,10 @@ Provide a privacy-respecting, self-hostable video conferencing solution with AI 
 - **Shared packages** (`@repo/ui`, `@repo/eslint-config`, `@repo/typescript-config`)
 
 ### MCP Integration
-- **Python MCP Server** (FastMCP)
-- **TypeScript MCP Server** (alternative)
-- **Tools**: `get_dev_stats`, `query_system_logs`
+- **Python MCP Server** (Fast_MCP 2.14.4 SOTA Refactor)
+- **Context Injection**: `ctx` provided to all tools
+- **Tools**: `get_dev_stats`, `query_system_logs`, `sample_log_analysis` (Iterative Sampling)
+- **Correlation**: Industrial-standard logging with unique IDs per request
 
 ---
 
@@ -256,7 +257,7 @@ Provide a privacy-respecting, self-hostable video conferencing solution with AI 
 
 ### Flow 1: First-Time User Joining Conference
 
-1. Navigate to http://localhost:10800
+1. Navigate to http://localhost:15500
 2. (Optional) Click "Test Camera & Audio"
    - Grant permissions
    - View camera preview
@@ -324,7 +325,7 @@ Provide a privacy-respecting, self-hostable video conferencing solution with AI 
 ### Network Requirements
 - **Minimum bandwidth**: 1 Mbps up/down per participant
 - **Recommended bandwidth**: 3 Mbps up/down
-- **WebRTC ports**: UDP 7881 (LiveKit default)
+- **WebRTC ports**: UDP 15581 (LiveKit default)
 
 ### System Requirements
 
@@ -429,7 +430,13 @@ Provide a privacy-respecting, self-hostable video conferencing solution with AI 
 
 ## Deployment
 
-### Development
+### Full Dockerization
+- **One-command stack:** `docker compose up -d` runs livekit, redis, web (port 15500), and agent.
+- **Ollama runs outside Docker on your PC.** Start Ollama on the host (e.g. `ollama serve`, `ollama pull gemma2`). The agent container connects to LiveKit inside the network and to the host's Ollama via `OLLAMA_BASE_URL=http://host.docker.internal:11434/v1`. On Linux, `extra_hosts: host.docker.internal:host-gateway` is set.
+- **Web** in Docker serv- Test at http://localhost:15500/test; browser connects to LiveKit at ws://localhost:15580.
+- **Optional:** Add an `ollama` service to compose and set agent `OLLAMA_BASE_URL=http://ollama:11434/v1` for a fully self-contained stack (Ollama inside Docker).
+
+### Development (local web + agent)
 ```powershell
 .\setup.ps1
 docker compose up -d

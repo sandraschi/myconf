@@ -2,6 +2,14 @@
 
 **Professional video conferencing platform** with AI voice agent integration, built on Turborepo and LiveKit. Features real-time transcription, multi-room support, and comprehensive device testing.
 
+## Stability & SOTA Alignment
+
+As of February 2026, AG-Visio adheres to strict **SOTA (State-Of-The-Art) standards** for production-grade web applications:
+- **Zero-Warning Policy:** The entire `apps/web` workspace is linted with `eslint --max-warnings 0`.
+- **Type Hardening:** Replaced global `any` types with `unknown` and strict interfaces in telemetry and real-time data handlers.
+- **Hook Optimization:** All React hooks are audited for dependency correctness and memoized via `useCallback` for performance stability.
+- **Environmental Integrity:** Explicit environment variable declaration in `turbo.json` ensure predictable builds across dev/CI/prod.
+
 ## Project Overview
 
 AG-Visio is a modern, production-ready video conferencing solution combining:
@@ -19,7 +27,7 @@ AG-Visio is a modern, production-ready video conferencing solution combining:
   - **LLM**: Ollama integration (e.g., `gemma2`)
   - **Behavior**: Joins rooms, responds when addressed, detects jargon/LDDO patterns
 
-- **apps/web**: Next.js 16 + React 19 application (port 10800)
+- **apps/web**: Next.js 16 + React 19 application (port 15500)
   - LiveKit client integration
   - Professional topbar with auth, help, logger
   - Room selection and switching
@@ -29,7 +37,7 @@ AG-Visio is a modern, production-ready video conferencing solution combining:
   - Help modal with extensive documentation
   - Log viewer with filtering and export
 
-- **apps/docs**: Next.js documentation site (port 3001)
+- **apps/docs**: Next.js documentation site (port 15501)
 
 - **packages/mcp-server**: Dual-language MCP server
   - **Python** (`mcp_server.py`): FastMCP, `get_dev_stats`, `query_system_logs`
@@ -37,8 +45,8 @@ AG-Visio is a modern, production-ready video conferencing solution combining:
   - Run: `python packages/mcp-server/mcp_server.py` or `node packages/mcp-server/dist/index.js`
 
 - **Infrastructure** (`docker-compose.yaml`):
-  - LiveKit server (ports 7880–7882, 7881 for WebRTC)
-  - Redis (port 6379)
+  - LiveKit server (ports 15580–15582, 15581 for WebRTC)
+  - Redis (port 16379)
   - Configuration: `livekit.yaml`
 
 ### Features
@@ -51,7 +59,7 @@ AG-Visio is a modern, production-ready video conferencing solution combining:
 - **Help system** with keyboard shortcuts (`?` to open)
 - **Log viewer** with filtering, export, and auto-scroll
 - **User menu** with avatar, status, and logout
-- **Responsive design** with dark theme
+- **Premium UI** with Glassmorphism, dark theme, and micro-animations
 
 #### AI Agent
 - Automatic room joining
@@ -59,10 +67,11 @@ AG-Visio is a modern, production-ready video conferencing solution combining:
 - Jargon and LDDO detection
 - Natural conversation flow
 
-#### MCP Tools
-- Git and disk statistics
-- Windows Event Log querying
-- Cross-platform compatibility
+#### MCP Tools (Fast_MCP 2.14.4 SOTA)
+- **Git & Disk Stats**: Real-time dev metrics
+- **System Log Query**: Targeted Windows Event Log introspection
+- **Iterative Sampling**: `sample_log_analysis` for AI-guided root cause analysis
+- **Context Awareness**: Full correlation tracing via injected `ctx`
 
 ## Quick Start
 
@@ -79,8 +88,26 @@ This script:
 2. Creates `apps/agent/venv` Python virtual environment
 3. Installs agent dependencies from `requirements.txt`
 4. Installs MCP package dependencies
+5. **Ollama check:** if Ollama is not running and GPU has 6GB+ VRAM (nvidia-smi), offers to install Ollama (winget or open download page)
 
 ### Running the Stack
+
+**Option A: Full Dockerization (recommended for one-command run)**
+
+1. **Ollama runs outside Docker on your PC.** Start Ollama on the host (e.g. `ollama serve`), then pull the model: `ollama pull gemma2`. The agent container reaches it via `host.docker.internal:11434`.
+2. From repo root:
+   ```powershell
+   docker compose up -d
+   ```
+3. Access:
+   - Web UI: http://localhost:15500
+   - Health: http://localhost:15500/health
+   - Test page: http://localhost:15500/test
+   - Settings: http://localhost:15500/settings
+
+   The agent runs in a container and connects to LiveKit; it uses `OLLAMA_BASE_URL=http://host.docker.internal:11434/v1` to reach Ollama running on your PC (outside Docker). On Linux, `extra_hosts` in compose provides `host.docker.internal`.
+
+**Option B: Dev (web + agent locally)**
 
 1. **Start Infrastructure**:
    ```powershell
@@ -101,16 +128,17 @@ This script:
    ```
 
 4. **Access Application**:
-   - Web UI: http://localhost:10800
-   - Video Test: http://localhost:10800/test
-   - Settings: http://localhost:10800/settings
+   - Web UI: http://localhost:15500
+   - Schedule: http://localhost:15500/schedule (create meetings, copy room link)
+   - Video Test: http://localhost:15500/test
+   - Settings: http://localhost:15500/settings
 
 ### Environment Configuration
 
 Create `apps/web/.env.local`:
 
 ```env
-NEXT_PUBLIC_LIVEKIT_URL=ws://localhost:7880
+NEXT_PUBLIC_LIVEKIT_URL=ws://localhost:15580
 LIVEKIT_API_KEY=devkey
 LIVEKIT_API_SECRET=secret
 ```
@@ -119,13 +147,13 @@ LIVEKIT_API_SECRET=secret
 
 ### Joining a Conference
 
-1. Navigate to http://localhost:10800 (or http://YOUR_IP:10800 from another device)
-2. (Optional) Test your camera/audio at http://localhost:10800/test
+1. Navigate to http://localhost:15500 (or http://YOUR_IP:15500 from another device)
+2. (Optional) Test your camera/audio at http://localhost:15500/test
 3. Select a room from the dropdown (discovered from LiveKit + defaults)
 4. Enter your name
 5. Click "Join Room"
 
-**Discovery**: The server URL is auto-detected from your connection. When joining from another PC on the same network (e.g. http://192.168.1.100:10800), the LiveKit URL is inferred as ws://192.168.1.100:7880. No manual configuration needed.
+**Discovery**: The server URL is auto-detected from your connection. When joining from another PC on the same network (e.g. http://192.168.1.100:15500), the LiveKit URL is inferred as ws://192.168.1.100:15580. No manual configuration needed.
 
 ### Switching Rooms
 
@@ -143,6 +171,7 @@ LIVEKIT_API_SECRET=secret
 Configure via Settings page (`/settings`):
 - LiveKit server URL
 - Default room name
+- **Ollama (AI agent):** model discovery, list installed models, load (pull) a model; status and install link if Ollama is not running
 - Audio/video device selection
 - Theme preference (dark/light/system)
 - Telemetry opt-out
@@ -158,12 +187,14 @@ Click the Terminal icon in topbar to:
 
 ### Roadmap
 
-- **Phase 2.5 (planned): Full self-host calendaring & invitations**
-  - Event store (SQLite/Postgres or CalDAV e.g. Radicale/Baïkal)
-  - Scheduling UI: create meetings, room link, optional QR
-  - Invitations: email via self-hosted SMTP or Email MCP; copy-link fallback
-  - No external calendar dependency; optional CalDAV sync for clients
-  - MCP tools: list meetings, create meeting, send invite
+- **Phase 2.5 (ACTIVE): Full self-host calendaring & AI Operations**
+  - **Refined MCP Server**: Fast_MCP 2.14.4 compliant with `ctx` injection
+  - **Log Sampling**: Iterative log analysis for automated debugging
+  - **Event store** (SQLite/Postgres or CalDAV e.g. Radicale/Baïkal)
+  - **Scheduling UI**: create meetings, room link, optional QR
+  - **Invitations**: email via self-hosted SMTP or Email MCP; copy-link fallback
+  - **No external calendar dependency**; optional CalDAV sync for clients
+  - **MCP tools**: list meetings, create meeting, send invite
 - See [PRD.md](PRD.md) for full roadmap (Phase 2, 2.5, 3).
 
 ## Development
@@ -348,7 +379,7 @@ Config: `pyproject.toml` (line-length 100, target Python 3.10)
 
 ### Port Already in Use
 
-If port 10800 is occupied:
+If port 15500 is occupied:
 ```powershell
 # Change port in apps/web/package.json
 "dev": "next dev --port <NEW_PORT>"
@@ -383,7 +414,7 @@ If port 10800 is occupied:
 ### Camera/Microphone Access Denied
 
 - Grant browser permissions for camera/microphone
-- Test at http://localhost:10800/test
+- Test at http://localhost:15500/test
 - Check browser console for permission errors
 
 ## MCP Server Usage

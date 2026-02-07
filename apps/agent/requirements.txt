@@ -1,0 +1,10 @@
+livekit-agents
+livekit-plugins-silero
+livekit-plugins-whisper
+livekit-plugins-openai
+faster-whisper
+piper-tts
+kokoro-tts
+ollama
+python-dotenv
+fastmcp
