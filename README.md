@@ -55,9 +55,11 @@ AG-Visio is a modern, production-ready video conferencing solution combining:
 
 #### Web Application
 - **Multi-room conferencing** with dropdown switcher
-- **Remote Support Substrate**: Integrated orchestration of remote assistance tools.
+- **Remote Support Substrate**: Professional **RustDesk bridge** embedded for remote control assistance.
+- **Dynamic Focus Mode**: Automatic 70/30 grid split promoting active screen shares for maximum visibility.
 - **Device testing** page (`/test`) with live preview and audio levels
 - **Real-time transcription** sidebar with speaker identification
+- **Triple-Tab Exploration**: Navigate between Transcripts, Chat, and Remote Assistance.
 - **Settings page** with device selection, theme, telemetry controls
 - **Help system** with keyboard shortcuts (`?` to open)
 - **Log viewer** with filtering, export, and auto-scroll

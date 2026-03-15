@@ -1,29 +1,41 @@
-# Webapp Start - Standardized SOTA (Auto-Repaired V2.5)
-$WebPort = 10886
-$BackendPort = 10887
-$ProjectRoot = Split-Path -Parent $PSScriptRoot
+# AG-Visio Fleet Orchestrator | Sandra Schipal | SOTA 2026
+# Unified Startup Substrate for Web UI and Voice Agent
 
-# 1. Kill any process squatting on the ports
-Write-Host "Checking for port squatters on $WebPort and $BackendPort..." -ForegroundColor Yellow
-$pids = Get-NetTCPConnection -LocalPort $WebPort, $BackendPort -ErrorAction SilentlyContinue | Where-Object { $_.OwningProcess -gt 4 } | Select-Object -ExpandProperty OwningProcess -Unique
-foreach ($p in $pids) {
-    Write-Host "Found squatter (PID: $p). Terminating..." -ForegroundColor Red
-    try { Stop-Process -Id $p -Force -ErrorAction Stop } catch { Write-Host "Warning: Could not terminate PID $p." -ForegroundColor Gray }
+$WebPort = 10886
+$AgentPort = 10887
+
+Write-Host "Sandra: Initializing Fleet Orchestration Protocol..." -ForegroundColor Cyan
+
+# 1. Port Cleansing
+Write-Host "Sandra: Cleansing substrate ports..." -ForegroundColor Yellow
+npx --yes kill-port $WebPort, $AgentPort 2>$null
+
+# 2. Dependency Health Checks
+Write-Host "Sandra: Verifying dependency grid (Ollama/Redis)..." -ForegroundColor Yellow
+
+# Check Ollama
+try {
+    Invoke-WebRequest -Uri "http://localhost:11434/api/tags" -UseBasicParsing -ErrorAction Stop > $null
+    Write-Host "  [OK] Ollama Substrate Active" -ForegroundColor Green
+} catch {
+    Write-Host "  [ERROR] Ollama not detected! Please start Ollama before proceeding." -ForegroundColor Red
+    exit 1
 }
 
-# 2. Setup
-Set-Location $PSScriptRoot
-if (-not (Test-Path "node_modules")) { npm install }
+# Check Redis (Standard port 6379)
+if (Get-NetTCPConnection -LocalPort 6379 -ErrorAction SilentlyContinue) {
+    Write-Host "  [OK] Redis Substrate Active" -ForegroundColor Green
+} else {
+    Write-Host "  [WARNING] Redis not detected on 6379. Multi-agent state sync may be degraded." -ForegroundColor DarkYellow
+}
 
-# 3. Start the Python backend (Background)
-Write-Host "Starting Python backend on port $BackendPort ..." -ForegroundColor Cyan
+# 3. Launch Agent Substrate (Separate Window)
+Write-Host "Sandra: Launching Voice Agent substrate..." -ForegroundColor Green
+$agentCmd = "cmd /c 'cd apps\agent && python agent.py dev --http-port $AgentPort'"
+Start-Process powershell -ArgumentList "-NoExit", "-Command", "Set-Location apps\agent; .\start.ps1" -WindowStyle Normal
 
-# Use TRIPLE backtick to ensure $env:PYTHONPATH reaches the REAL shell
-$backendCmd = "`$env:PYTHONPATH = '$PSScriptRoot;$PSScriptRoot\src'; Set-Location '$PSScriptRoot'; uv run uvicorn myconf.server:app --host 127.0.0.1 --port $BackendPort --log-level info"
-
-Start-Process powershell -ArgumentList "-NoExit", "-Command", $backendCmd -WindowStyle Normal
-
-# 4. Run server (Vite dev)
-Write-Host "Starting Vite frontend on port $WebPort ..." -ForegroundColor Green
-npm run dev -- --port $WebPort --host
+# 4. Launch Web UI (Current Window)
+Write-Host "Sandra: Launching Web UI substrate..." -ForegroundColor Green
+Set-Location apps\web
+.\start.ps1
 

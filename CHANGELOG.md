@@ -7,10 +7,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-03-15
+
 ### Added
-- **Stability Baseline:** Unified linting strategy across the monorepo. `apps/web` now passes with 0 warnings (`max-warnings 0`).
+- **LiveKit 1.x & SDK v2 Upgrade:**
+    - Integrated `VoicePipelineAgent` (LiveKit 1.x) with multi-agent session support.
+    - Implemented End-of-Utterance (EOU) turn detection for more natural conversations.
+    - Upgraded Web UI to LiveKit SDK v2 standards (Identity-based components).
+- **Advanced Visualization:**
+    - **Focus Mode:** Automatic Promotion of active screen shares to a large viewport (70/30 grid split).
+    - **Manual Focus:** Users can manually toggle focus states for any participant/track.
+- **RustDesk Integration:**
+    - Professional remote control bridge via embedded `RustDeskPanel`.
+    - Secure iframe sandboxing for remote interaction.
+    - Triple-tab sidebar (Transcript / Chat / Remote).
+- **SOTA UX:**
+    - Refined dashboard glassmorphism and premium UI animations.
+    - Integrated Chat Hub via LiveKit's native chat data channel.
 
 ### Fixed
+- Resolved all major linting warnings in `apps/web` (SDK v2 migration cleanup).
+- Standardized `TrackRef` and `ParticipantTile` usage throughout the dashboard.
+- Improved transcription feed responsiveness for long-running sessions.
+
+### [0.1.5] - 2026-02-27
 - **Linting & Type Safety:**
   - Resolved 43 original linting warnings in the web application.
   - Fixed `turbo/no-undeclared-env-vars` by registering `LIVEKIT_API_KEY`, `LIVEKIT_API_SECRET`, `OLLAMA_HOST`, `NODE_ENV`, `NEXT_PUBLIC_LIVEKIT_URL`, and `CI` in `turbo.json`.

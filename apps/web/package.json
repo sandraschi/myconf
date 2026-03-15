@@ -4,7 +4,7 @@
   "type": "module",
   "private": true,
   "scripts": {
-    "dev": "next dev --port 15500",
+    "dev": "next dev --port 10886",
     "build": "next build",
     "start": "next start",
     "lint": "eslint --max-warnings 0",

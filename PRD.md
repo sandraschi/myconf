@@ -184,8 +184,10 @@ Provide a privacy-respecting, self-hostable video conferencing solution with AI 
 
 #### 6.3 Configuration
 - Python-based agent (`apps/agent/agent.py`)
-- Configurable via environment variables
-- Requires Ollama with compatible model
+- **AGENT_MODE**: Toggle between `local` and `cloud` in `.env`.
+- **Local Substrate**: Ollama (gemma2), Whisper (STT), Piper (TTS).
+- **Cloud Substrate**: OpenAI (LLM), Deepgram (STT), ElevenLabs (TTS).
+- Requires Ollama with compatible model for local mode.
 
 ### 7. Logging & Telemetry
 

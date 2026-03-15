@@ -8,7 +8,7 @@ import {
   useRoomContext,
 } from "@livekit/components-react";
 import "@livekit/components-styles";
-import { Track, RoomEvent } from "livekit-client";
+import { Track, RoomEvent, Participant, TranscriptionSegment } from "livekit-client";
 import { useState, useEffect, useRef } from "react";
 import { Loader2 } from "lucide-react";
 import ErrorBoundary from "@/components/ErrorBoundary";
@@ -17,6 +17,9 @@ import LogViewer from "@/components/LogViewer";
 import AgentStatus from "@/components/AgentStatus";
 import ReconnectionBanner from "@/components/ReconnectionBanner";
 import ChatPanel from "@/components/ChatPanel";
+import RustDeskPanel from "@/components/RustDeskPanel";
+import RemoteAssistanceOverlay from "@/components/RemoteAssistanceOverlay";
+import { AgentFleetPanel } from "@/components/AgentFleetPanel";
 import { telemetry } from "@/lib/telemetry";
 import { useSettings } from "@/lib/settings";
 import { useDiscovery } from "@/lib/discovery";
@@ -45,7 +48,8 @@ export default function ModConsDashboard() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isLogViewerOpen, setIsLogViewerOpen] = useState(false);
-  const [rightPanelTab, setRightPanelTab] = useState<"transcript" | "chat">("transcript");
+  const [rightPanelTab, setRightPanelTab] = useState<"transcript" | "chat" | "remote" | "fleet">("transcript");
+  const [focusedTrackSid, setFocusedTrackSid] = useState<string | null>(null);
   const hasAppliedRoomParam = useRef(false);
   const deviceValidation = usePreJoinValidation(settings);
 
@@ -191,13 +195,17 @@ export default function ModConsDashboard() {
               data-lk-theme="default"
               style={{ height: "100%", width: "100%", display: "flex", flexDirection: "row" }}
             >
+              <RemoteAssistanceOverlay />
               <div className="relative flex-1 p-4 overflow-y-auto flex flex-col min-w-0">
                 <ReconnectionBanner />
                 <div className="flex items-center justify-between gap-2 mb-4">
                   <AgentStatus />
                 </div>
                 <div className="flex-1 min-h-0">
-                  <ModConsGrid />
+                  <ModConsGrid 
+                    focusedTrackSid={focusedTrackSid} 
+                    onTrackFocus={(sid) => setFocusedTrackSid(sid === focusedTrackSid ? null : sid)} 
+                  />
                 </div>
                 <div className="mt-4 p-2 glass-panel rounded-2xl">
                   <ControlBar
@@ -227,13 +235,23 @@ export default function ModConsDashboard() {
                   </button>
                   <button
                     type="button"
-                    onClick={() => setRightPanelTab("chat")}
-                    className={`flex-1 px-4 py-3 text-xs font-semibold uppercase tracking-wider transition-colors ${rightPanelTab === "chat"
+                    onClick={() => setRightPanelTab("remote")}
+                    className={`flex-1 px-4 py-3 text-xs font-semibold uppercase tracking-wider transition-colors ${rightPanelTab === "remote"
                       ? "bg-neutral-800 text-white border-b-2 border-blue-500"
                       : "text-gray-500 hover:text-gray-300"
                       }`}
                   >
-                    Chat
+                    Remote
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setRightPanelTab("fleet")}
+                    className={`flex-1 px-4 py-3 text-xs font-semibold uppercase tracking-wider transition-colors ${rightPanelTab === "fleet"
+                      ? "bg-neutral-800 text-white border-b-2 border-blue-500"
+                      : "text-gray-500 hover:text-gray-300"
+                      }`}
+                  >
+                    Fleet
                   </button>
                 </div>
                 <div className="flex-1 min-h-0 overflow-hidden">
@@ -241,8 +259,14 @@ export default function ModConsDashboard() {
                     <div className="h-full p-4 overflow-hidden">
                       <TranscriptionFeed />
                     </div>
-                  ) : (
+                  ) : rightPanelTab === "chat" ? (
                     <ChatPanel />
+                  ) : rightPanelTab === "remote" ? (
+                    <RustDeskPanel />
+                  ) : (
+                    <div className="h-full p-4 overflow-y-auto">
+                      <AgentFleetPanel />
+                    </div>
                   )}
                 </div>
               </aside>
@@ -416,7 +440,13 @@ export default function ModConsDashboard() {
   );
 }
 
-function ModConsGrid() {
+function ModConsGrid({ 
+  focusedTrackSid, 
+  onTrackFocus 
+}: { 
+  focusedTrackSid: string | null; 
+  onTrackFocus: (sid: string) => void; 
+}) {
   const tracks = useTracks(
     [
       { source: Track.Source.Camera, withPlaceholder: true },
@@ -432,42 +462,88 @@ function ModConsGrid() {
     (t) => t.source === Track.Source.Camera
   );
 
-  return (
-    <div className="flex flex-col gap-4 mb-4 h-full">
-      {screenShareTracks.length > 0 && (
-        <div className="flex-1 min-h-0">
-          <div className="grid grid-cols-1 gap-2 h-full">
-            {screenShareTracks.map((track) => (
+  // Automatic Focus Selection: If no manual focus, pick the first screen share
+  const effectiveFocusSid = focusedTrackSid ?? screenShareTracks[0]?.publication?.trackSid;
+  const focusedTrack = tracks.find(t => t.publication?.trackSid === effectiveFocusSid);
+  const otherTracks = tracks.filter(t => t.publication?.trackSid !== effectiveFocusSid);
+
+  if (effectiveFocusSid && focusedTrack) {
+    const focusedSid = focusedTrack.publication?.trackSid;
+    return (
+      <div className="flex flex-col md:flex-row gap-4 h-full overflow-hidden">
+        {/* Main Focus Area (70%) */}
+        <div className="flex-[7] min-h-0 bg-neutral-900 rounded-2xl overflow-hidden border border-blue-500/30 relative group">
+          <ParticipantTile trackRef={focusedTrack} />
+          <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity">
+             <button 
+              onClick={() => focusedSid && onTrackFocus(focusedSid)}
+              className="px-2 py-1 bg-black/50 backdrop-blur text-[10px] text-white rounded border border-white/10 uppercase tracking-tighter"
+            >
+              {focusedTrackSid ? "Release Focus" : "Manual Focus"}
+            </button>
+          </div>
+        </div>
+
+        {/* Sidebar Grid (30%) */}
+        <div className="flex-[3] flex flex-col gap-3 overflow-y-auto pr-1 custom-scrollbar">
+          {otherTracks.map((track) => {
+            const sid = track.publication?.trackSid;
+            return (
               <div
-                key={track.participant.identity + track.source}
-                className="flex-1 min-h-[200px] bg-neutral-900 rounded-lg overflow-hidden border-2 border-blue-500/50"
+                key={track.participant.identity + track.source + sid}
+                onClick={() => sid && onTrackFocus(sid)}
+                className="aspect-video bg-neutral-900 rounded-xl overflow-hidden cursor-pointer border border-transparent hover:border-white/20 transition-all flex-shrink-0"
               >
                 <ParticipantTile trackRef={track} />
               </div>
-            ))}
-          </div>
+            );
+          })}
         </div>
-      )}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 shrink-0">
-        {cameraTracks.map((track) => (
-          <div
-            key={track.participant.identity + track.source}
-            className="aspect-video bg-neutral-900 rounded-lg overflow-hidden"
-          >
-            <ParticipantTile trackRef={track} />
-          </div>
-        ))}
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-col gap-4 mb-4 h-full overflow-hidden">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 overflow-y-auto p-1">
+        {cameraTracks.map((track) => {
+          const sid = track.publication?.trackSid;
+          return (
+            <div
+              key={track.participant.identity + track.source + sid}
+              onClick={() => sid && onTrackFocus(sid)}
+              className="aspect-video bg-neutral-900 rounded-xl overflow-hidden border border-white/5 hover:border-white/20 transition-all cursor-pointer"
+            >
+              <ParticipantTile trackRef={track} />
+            </div>
+          );
+        })}
       </div>
     </div>
   );
 }
 
 function TranscriptionFeed() {
-  const [transcripts, setTranscripts] = useState<TranscriptEntry[]>([]);
   const room = useRoomContext();
+  const [transcripts, setTranscripts] = useState<TranscriptEntry[]>([]);
 
   useEffect(() => {
     if (!room) return;
+
+    // SOTA: Handle built-in transcription events (SDK v2)
+    const handleTranscription = (segments: TranscriptionSegment[], participant?: Participant) => {
+      segments.forEach((s) => {
+        if (s.final) {
+          const entry: TranscriptEntry = {
+            id: `v2-${s.id || Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+            timestamp: new Date().toLocaleTimeString("en-US", { hour12: false }),
+            speaker: participant?.identity || "Unknown",
+            text: s.text,
+          };
+          setTranscripts((prev) => [...prev.slice(-49), entry]);
+        }
+      });
+    };
 
     const handleData = (payload: Uint8Array, participant: { identity: string } | undefined) => {
       try {
@@ -490,8 +566,10 @@ function TranscriptionFeed() {
     };
 
     room.on(RoomEvent.DataReceived, handleData);
+    room.on(RoomEvent.TranscriptionReceived, handleTranscription);
     return () => {
       room.off(RoomEvent.DataReceived, handleData);
+      room.off(RoomEvent.TranscriptionReceived, handleTranscription);
     };
   }, [room]);
 
