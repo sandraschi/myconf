@@ -9,6 +9,8 @@ As of February 2026, AG-Visio adheres to strict **SOTA (State-Of-The-Art) standa
 - **Type Hardening:** Replaced global `any` types with `unknown` and strict interfaces in telemetry and real-time data handlers.
 - **Hook Optimization:** All React hooks are audited for dependency correctness and memoized via `useCallback` for performance stability.
 - **Environmental Integrity:** Explicit environment variable declaration in `turbo.json` ensure predictable builds across dev/CI/prod.
+- **Industrial Reliability:** Enhanced agent error prefixing (`SOTA-E03`, `SOTA-C01`) for clear substrate failure diagnostics.
+- **Automated Health Monitoring:** Integrated substrate health check tool in the MCP server.
 
 ## Project Overview
 
@@ -53,13 +55,14 @@ AG-Visio is a modern, production-ready video conferencing solution combining:
 
 #### Web Application
 - **Multi-room conferencing** with dropdown switcher
+- **Remote Support Substrate**: Integrated orchestration of remote assistance tools.
 - **Device testing** page (`/test`) with live preview and audio levels
 - **Real-time transcription** sidebar with speaker identification
 - **Settings page** with device selection, theme, telemetry controls
 - **Help system** with keyboard shortcuts (`?` to open)
 - **Log viewer** with filtering, export, and auto-scroll
 - **User menu** with avatar, status, and logout
-- **Premium UI** with Glassmorphism, dark theme, and micro-animations
+- **Premium UI**: 2026 SOTA design with Glassmorphism, dark theme, and micro-animations.
 
 #### AI Agent
 - Automatic room joining
@@ -67,11 +70,14 @@ AG-Visio is a modern, production-ready video conferencing solution combining:
 - Jargon and LDDO detection
 - Natural conversation flow
 
-#### MCP Tools (Fast_MCP 2.14.4 SOTA)
-- **Git & Disk Stats**: Real-time dev metrics
-- **System Log Query**: Targeted Windows Event Log introspection
-- **Iterative Sampling**: `sample_log_analysis` for AI-guided root cause analysis
-- **Context Awareness**: Full correlation tracing via injected `ctx`
+#### MCP Tools (FastMCP 2.14.4 SOTA)
+- **Substrate Health**: `get_system_health` for real-time LiveKit/Ollama monitoring.
+- **Remote Orchestration**: `orchestrate_remote_support` for managing `rustdesk-mcp` substrates.
+- **Git & Disk Stats**: `get_dev_stats` for industrial dev environment metrics.
+- **System Log Query**: Windows Event Log introspection with SOTA filtering.
+- **Iterative Sampling**: `sample_log_analysis` for AI-guided root cause analysis.
+- **Context Awareness**: Full correlation tracing via injected `ctx`.
+- **Inter-Agent Signaling**: `notify_conference_active` for grid-wide state propagation.
 
 ## Quick Start
 
@@ -141,6 +147,30 @@ Create `apps/web/.env.local`:
 NEXT_PUBLIC_LIVEKIT_URL=ws://localhost:15580
 LIVEKIT_API_KEY=devkey
 LIVEKIT_API_SECRET=secret
+```
+
+
+## 🚀 Installation
+
+### Prerequisites
+- [uv](https://docs.astral.sh/uv/) installed (RECOMMENDED)
+- Python 3.12+
+
+### 📦 Quick Start
+Run immediately via `uvx`:
+```bash
+uvx myconf
+```
+
+### 🎯 Claude Desktop Integration
+Add to your `claude_desktop_config.json`:
+```json
+"mcpServers": {
+  "myconf": {
+    "command": "uv",
+    "args": ["--directory", "D:/Dev/repos/myconf", "run", "myconf"]
+  }
+}
 ```
 
 ## Usage
@@ -417,7 +447,31 @@ If port 15500 is occupied:
 - Test at http://localhost:15500/test
 - Check browser console for permission errors
 
-## MCP Server Usage
+
+## 🚀 Installation
+
+### Prerequisites
+- [uv](https://docs.astral.sh/uv/) installed (RECOMMENDED)
+- Python 3.12+
+
+### 📦 Quick Start
+Run immediately via `uvx`:
+```bash
+uvx myconf
+```
+
+### 🎯 Claude Desktop Integration
+Add to your `claude_desktop_config.json`:
+```json
+"mcpServers": {
+  "myconf": {
+    "command": "uv",
+    "args": ["--directory", "D:/Dev/repos/myconf", "run", "myconf"]
+  }
+}
+```
+
+## Usage
 
 ### Running MCP Tools
 

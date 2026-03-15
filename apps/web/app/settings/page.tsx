@@ -427,6 +427,7 @@ export default function SettingsPage() {
               value={localSettings.preferredAudioInput}
               onChange={(e) => updateLocal("preferredAudioInput", e.target.value)}
               className="w-full px-4 py-2 bg-neutral-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-blue-500"
+              title="Microphone Settings"
             >
               <option value="">System Default</option>
               {devices.audioInputs.map((device) => (
@@ -446,6 +447,7 @@ export default function SettingsPage() {
               value={localSettings.preferredVideoInput}
               onChange={(e) => updateLocal("preferredVideoInput", e.target.value)}
               className="w-full px-4 py-2 bg-neutral-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-blue-500"
+              title="Camera Settings"
             >
               <option value="">System Default</option>
               {devices.videoInputs.map((device) => (
@@ -465,6 +467,7 @@ export default function SettingsPage() {
               value={localSettings.preferredAudioOutput}
               onChange={(e) => updateLocal("preferredAudioOutput", e.target.value)}
               className="w-full px-4 py-2 bg-neutral-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-blue-500"
+              title="Speaker Settings"
             >
               <option value="">System Default</option>
               {devices.audioOutputs.map((device) => (

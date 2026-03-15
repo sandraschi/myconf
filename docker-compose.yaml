@@ -4,10 +4,9 @@
 # Optional: add an ollama service to compose and set agent OLLAMA_BASE_URL=http://ollama:11434/v1 for all-in-Docker.
 services:
   livekit:
-    image: livekit/livekit-server:latest
-    command: --config /etc/livekit.yaml
-    volumes:
-      - ./livekit.yaml:/etc/livekit.yaml
+    build:
+      context: .
+      dockerfile: livekit.Dockerfile
     ports:
       - "15580:15580"
       - "15581:15581"

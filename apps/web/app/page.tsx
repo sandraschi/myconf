@@ -276,6 +276,7 @@ export default function ModConsDashboard() {
                           }
                         }}
                         className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-accent-primary/50 transition-all"
+                        title="Select Room"
                       >
                         {(
                           suggestedRooms.length > 0

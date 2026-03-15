@@ -1,10 +1,8 @@
-livekit-agents
-livekit-plugins-silero
-livekit-plugins-whisper
-livekit-plugins-openai
+livekit-agents[pipeline,silero,turn-detector]>=1.4.0
+livekit-plugins-openai>=1.4.0
+livekit-plugins-silero>=1.4.0
+livekit-plugins-piper-tts
 faster-whisper
-piper-tts
-kokoro-tts
 ollama
 python-dotenv
 fastmcp

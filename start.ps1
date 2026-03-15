@@ -1,47 +1,29 @@
-# AG-Visio One-Command Startup
-# Starts LiveKit + Redis, then web app. Agent runs separately (requires Ollama).
+# Webapp Start - Standardized SOTA (Auto-Repaired V2.5)
+$WebPort = 10886
+$BackendPort = 10887
+$ProjectRoot = Split-Path -Parent $PSScriptRoot
 
-param(
-    [switch]$DockerOnly,
-    [switch]$NoDocker
-)
-
-$ErrorActionPreference = "Stop"
-$repoRoot = $PSScriptRoot
-
-Write-Host "AG-Visio Startup" -ForegroundColor Cyan
-Write-Host ""
-
-if (-not $NoDocker) {
-    Write-Host "Starting Docker (LiveKit + Redis)..." -ForegroundColor Yellow
-    Set-Location $repoRoot
-    docker compose up -d
-    if (-not $?) {
-        Write-Host "Docker compose failed. Is Docker running?" -ForegroundColor Red
-        exit 1
-    }
-    Write-Host "LiveKit: ws://localhost:15580" -ForegroundColor Green
-    Write-Host "Redis: localhost:16379" -ForegroundColor Green
-    Write-Host ""
-
-    if ($DockerOnly) {
-        Write-Host "Docker-only mode. Run agent: cd apps/agent; .\venv\Scripts\activate; python agent.py dev" -ForegroundColor Gray
-        Write-Host "Run web: npm run dev --workspace=web" -ForegroundColor Gray
-        exit 0
-    }
-
-    Write-Host "Waiting 3s for LiveKit to be ready..." -ForegroundColor Gray
-    Start-Sleep -Seconds 3
+# 1. Kill any process squatting on the ports
+Write-Host "Checking for port squatters on $WebPort and $BackendPort..." -ForegroundColor Yellow
+$pids = Get-NetTCPConnection -LocalPort $WebPort, $BackendPort -ErrorAction SilentlyContinue | Where-Object { $_.OwningProcess -gt 4 } | Select-Object -ExpandProperty OwningProcess -Unique
+foreach ($p in $pids) {
+    Write-Host "Found squatter (PID: $p). Terminating..." -ForegroundColor Red
+    try { Stop-Process -Id $p -Force -ErrorAction Stop } catch { Write-Host "Warning: Could not terminate PID $p." -ForegroundColor Gray }
 }
 
-Write-Host "Starting web app on port 15500..." -ForegroundColor Yellow
-Set-Location $repoRoot
-Start-Process -FilePath "npm" -ArgumentList "run", "dev", "--workspace=web" -NoNewWindow -PassThru | Out-Null
-Write-Host "Web: http://localhost:15500" -ForegroundColor Green
-Write-Host "Health: http://localhost:15500/health" -ForegroundColor Gray
-Write-Host ""
-Write-Host "To run the AI agent (requires Ollama + gemma2):" -ForegroundColor Gray
-Write-Host "  cd apps/agent" -ForegroundColor Gray
-Write-Host "  .\venv\Scripts\activate" -ForegroundColor Gray
-Write-Host "  python agent.py dev" -ForegroundColor Gray
-Write-Host ""
+# 2. Setup
+Set-Location $PSScriptRoot
+if (-not (Test-Path "node_modules")) { npm install }
+
+# 3. Start the Python backend (Background)
+Write-Host "Starting Python backend on port $BackendPort ..." -ForegroundColor Cyan
+
+# Use TRIPLE backtick to ensure $env:PYTHONPATH reaches the REAL shell
+$backendCmd = "`$env:PYTHONPATH = '$PSScriptRoot;$PSScriptRoot\src'; Set-Location '$PSScriptRoot'; uv run uvicorn myconf.server:app --host 127.0.0.1 --port $BackendPort --log-level info"
+
+Start-Process powershell -ArgumentList "-NoExit", "-Command", $backendCmd -WindowStyle Normal
+
+# 4. Run server (Vite dev)
+Write-Host "Starting Vite frontend on port $WebPort ..." -ForegroundColor Green
+npm run dev -- --port $WebPort --host
+

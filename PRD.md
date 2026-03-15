@@ -16,7 +16,9 @@ AG-Visio is a professional video conferencing platform combining real-time commu
 - **Device Testing** before joining meetings
 - **Multi-room Support** with seamless switching
 - **Real-time Transcription** with speaker identification
-- **Advanced Logging** for debugging and monitoring
+- **Remote Support Substrate**: Orchestrated `rustdesk-mcp` integration for industrial assistance.
+- **Inter-Agent Signaling**: Grid-wide state propagation and substrate orchestration.
+- **Advanced Logging**: Debugging and monitoring with correlation IDs.
 
 ---
 

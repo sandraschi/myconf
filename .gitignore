@@ -49,3 +49,9 @@ venv.bak/
 .pytest_cache/
 .ruff_cache/
 mcp_server.log
+agent_industrial.log
+build_agent_log*.txt
+
+# Lint/test output artifacts (never commit these)
+lint-results.json
+lint_output.txt
