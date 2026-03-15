@@ -4,7 +4,15 @@
 $WebPort = 10886
 $AgentPort = 10887
 
-Write-Host "Sandra: Initializing Fleet Orchestration Protocol..." -ForegroundColor Cyan
+# 0. Initial Setup Verification
+if (!(Test-Path "node_modules") -or !(Test-Path "apps\agent\venv")) {
+    Write-Host "Sandra: Missing dependency substrate. Launching first-run initialization..." -ForegroundColor Cyan
+    & .\setup.ps1
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host "Sandra: Critical failure during initialization. Aborting." -ForegroundColor Red
+        exit 1
+    }
+}
 
 # 1. Port Cleansing
 Write-Host "Sandra: Cleansing substrate ports..." -ForegroundColor Yellow
@@ -31,7 +39,6 @@ if (Get-NetTCPConnection -LocalPort 6379 -ErrorAction SilentlyContinue) {
 
 # 3. Launch Agent Substrate (Separate Window)
 Write-Host "Sandra: Launching Voice Agent substrate..." -ForegroundColor Green
-$agentCmd = "cmd /c 'cd apps\agent && python agent.py dev --http-port $AgentPort'"
 Start-Process powershell -ArgumentList "-NoExit", "-Command", "Set-Location apps\agent; .\start.ps1" -WindowStyle Normal
 
 # 4. Launch Web UI (Current Window)

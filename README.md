@@ -17,18 +17,14 @@ AG-Visio provides a complete environment for collaborative work, combining high-
 
 ## Quick Start
 
-### 1. Initial Setup
-From the repository root (PowerShell):
-```powershell
-.\setup.ps1
-```
-This script handles dependency installation for the web app, agent, and MCP server, and creates the Python virtual environment.
+The fastest way to launch the entire stack (LiveKit, Redis, Web UI, and AI Agent) is to run the orchestrator from the repository root:
 
-### 2. Launch the Stack
-The easiest way to start all services (LiveKit, Redis, Web UI, and AI Agent) is using the provided orchestrator:
 ```powershell
 .\start.bat
 ```
+
+> [!NOTE]
+> On the first run, `start.bat` will automatically trigger `setup.ps1` to install all necessary dependencies and configure the environment.
 
 ---
 
