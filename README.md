@@ -17,18 +17,19 @@ AG-Visio provides a complete environment for collaborative work, combining high-
 
 ## Quick Start
 
-The fastest way to launch the entire stack (LiveKit, Redis, Web UI, and AI Agent) is to run the orchestrator from the repository root:
+1. **Clone the repository**:
+   ```powershell
+   git clone https://github.com/sandraschi/myconf.git
+   cd myconf
+   ```
 
-```powershell
-.\start.bat
-```
+2. **Run the orchestrator**:
+   ```powershell
+   .\start.bat
+   ```
 
-> [!NOTE]
-> On the first run, `start.bat` will automatically trigger `setup.ps1` to install all necessary dependencies and configure the environment.
-
----
-
-## Directory Structure
+> [!TIP]
+> **One-Click Initialization**: On the first run, `start.bat` automatically detects missing dependencies and executes the setup substrate (installing Node modules and Python environments) before launching the services.
 
 - **apps/web**: Next.js dashboard for video rooms, settings, and remote assistance (Port 15500).
 - **apps/agent**: Python Voice Agent using Ollama, Whisper, and Piper.
