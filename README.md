@@ -31,65 +31,36 @@ AG-Visio provides a complete environment for collaborative work, combining high-
 > [!TIP]
 > **One-Click Initialization**: On the first run, `start.bat` automatically detects missing dependencies and executes the setup substrate (installing Node modules and Python environments) before launching the services.
 
-- **apps/web**: Next.js dashboard for video rooms, settings, and remote assistance (Port 15500).
-- **apps/agent**: Python Voice Agent using Ollama, Whisper, and Piper.
-- **apps/docs**: Technical documentation site (Port 15501).
-- **packages/mcp-server**: Monitoring tools for hardware, disk, and Git metrics.
-- **infrastructure**: Docker Compose configuration for LiveKit and Redis.
+## Documentation
+
+For internal architecture, protocol details, and deep-dive technical information (LiveKit, AI Agent components, STT/TTS, and System Orchestration), please refer to the **[Technical Reference](TECHNICAL.md)**.
+
+---
+
+## Directory Structure
+
+- **apps/web**: Next.js dashboard for video rooms and remote assistance.
+- **apps/agent**: Python Voice Agent orchestrator (Visio).
+- **apps/docs**: Technical documentation site.
+- **packages/mcp-server**: System monitoring and Git metric tools.
+- **infrastructure**: Deployment configuration (LiveKit/Redis).
 
 ---
 
 ## Configuration
 
 ### Environment Variables
-Create `apps/web/.env.local`:
+Setup `apps/web/.env.local` for room connectivity:
 ```env
 NEXT_PUBLIC_LIVEKIT_URL=ws://localhost:15580
 LIVEKIT_API_KEY=devkey
 LIVEKIT_API_SECRET=secret
 ```
 
-### AI Agent (Ollama)
-The assistant requires [Ollama](https://ollama.com/) running on the host. We recommend the `gemma2` model:
+### AI Models (Ollama)
+Visio requires [Ollama](https://ollama.com/) running on the host. We recommend the `gemma2` model.
 ```powershell
 ollama pull gemma2
-```
-
----
-
-## Usage Controls
-
-| Shortcut | Action |
-| --- | --- |
-| `?` | Open Help Modal |
-| `Esc` | Close Modals |
-| `Alt+R` | Toggle Remote Assistance Panel |
-
-- **Log Viewer**: Accessible via the terminal icon in the topbar for real-time diagnostics.
-- **Device Test**: Navigate to `/test` to verify camera and microphone levels before joining.
-
----
-
-## Development
-
-### Turborepo Commands
-- `turbo build`: Build all components.
-- `turbo dev`: Run the entire stack in development mode.
-- `turbo dev --filter=web`: Run only the web application.
-
-### Testing
-- **Web (Next.js)**: `npm run test` (Vitest) or `npm run test:e2e` (Playwright).
-- **Agent (Python)**: `pytest` within the `apps/agent` directory.
-
-### MCP Tools
-To use the monitoring tools in Claude Desktop, add the following to your configuration:
-```json
-"mcpServers": {
-  "myconf": {
-    "command": "uv",
-    "args": ["--directory", "D:/Dev/repos/myconf", "run", "myconf"]
-  }
-}
 ```
 
 ---
