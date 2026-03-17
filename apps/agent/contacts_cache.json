@@ -1,0 +1,65 @@
+[
+  {
+    "id": "off_1",
+    "name": "Steve Schipal",
+    "email": "steve@bank-it.at",
+    "phone": null,
+    "company": "Bank IT",
+    "source": "office",
+    "avatar_url": null
+  },
+  {
+    "id": "off_2",
+    "name": "Marion Hollabrunn",
+    "email": "marion@family.at",
+    "phone": null,
+    "company": null,
+    "source": "office",
+    "avatar_url": null
+  },
+  {
+    "id": "off_3",
+    "name": "Reinhard Hollabrunn",
+    "email": null,
+    "phone": null,
+    "company": null,
+    "source": "office",
+    "avatar_url": null
+  },
+  {
+    "id": "win_1",
+    "name": "Benny (GSD)",
+    "email": null,
+    "phone": null,
+    "company": null,
+    "source": "windows",
+    "avatar_url": "/avatars/benny.jpg"
+  },
+  {
+    "id": "win_2",
+    "name": "TMW TechLAB Service",
+    "email": "service@tmw.at",
+    "phone": null,
+    "company": null,
+    "source": "windows",
+    "avatar_url": null
+  },
+  {
+    "id": "goog_1",
+    "name": "Sandra Schipal (Personal)",
+    "email": "sandra.schipal@gmail.com",
+    "phone": null,
+    "company": null,
+    "source": "google",
+    "avatar_url": null
+  },
+  {
+    "id": "goog_2",
+    "name": "Japan Residency Support",
+    "email": "tokyo.desk@google.com",
+    "phone": null,
+    "company": "Google Japan",
+    "source": "google",
+    "avatar_url": null
+  }
+]

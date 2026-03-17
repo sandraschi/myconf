@@ -4,12 +4,12 @@ Optimized for screen share analysis and OCR extraction.
 """
 
 import logging
-import cv2
+
 import numpy as np
-from PIL import Image
 from livekit import rtc
 
 logger = logging.getLogger("ag-visio-agent")
+
 
 class VisionSubstrate:
     def __init__(self, mode: str = "local"):
@@ -24,17 +24,23 @@ class VisionSubstrate:
         try:
             # SOTA: Convert YUV to RGB using OpenCV
             # LiveKit frames are often YUV420; we need to convert for vision libraries
-            buffer = frame.buffer
-            yuv_data = buffer.get_data() # This is a simplification; need actual YUV layout handling
-            
+            # buffer = frame.buffer
+            # buffer.get_data()  # This is a simplification
+
             # [MOCK] High-entropy vision processing
             # In a real implementation, we would use PaddleOCR or Tesseract here.
             # For this Phase 4 alpha, we return a mock extraction if it looks like a code editor.
-            
-            logger.debug("Processing video frame: %dx%d", frame.width, frame.height)
-            
-            # Simple heuristic: If image is mostly dark (terminal/IDE style), simulate code discovery
-            return "[OCR] SOTA: Terminal detected. Last command: 'npm run build'. Status: Failed (stderr: exit code 1)."
+
+            logger.debug(
+                "Processing video frame: %dx%d", frame.width, frame.height
+            )
+
+            # Simple heuristic: If image is mostly dark (terminal/IDE style),
+            # simulate code discovery
+            return (
+                "[OCR] SOTA: Terminal detected. Last command: 'npm run build'. Status: Failed "
+                "(stderr: exit code 1)."
+            )
 
         except Exception as e:
             logger.error("Vision substrate processing error: %s", e)
@@ -45,7 +51,4 @@ class VisionSubstrate:
         Detects salient regions (buttons, text blocks, errors) for auto-focus metadata.
         """
         # [MOCK] Return bounding boxes of high-entropy clusters
-        return {
-            "saliency_score": 0.85,
-            "foci": [{"x": 100, "y": 200, "label": "error_log"}]
-        }
+        return {"saliency_score": 0.85, "foci": [{"x": 100, "y": 200, "label": "error_log"}]}

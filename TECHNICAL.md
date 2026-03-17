@@ -40,12 +40,19 @@ AG-Visio implements the **Model Context Protocol (MCP)** to provide the assistan
 - **Git Integration**: Automated status reporting for the monorepo.
 - **Extensibility**: Standardized JSON-RPC interface for adding new monitoring tools.
 
-## 5. Persistence & Vector Search (RAG)
+## 6. Multimodal Address Book
 
-Searchable memory is implemented using a Retrieval-Augmented Generation (RAG) pattern.
-- **Vector DB**: [LanceDB](https://lancedb.com/) for zero-config, disk-persisted vector storage.
-- **Embeddings**: `fastembed` for local, high-speed text vectorization.
-- **Search Logic**: Semantic similarity search against historical meeting transcripts and documentation.
+The VisioAgent supports a federated address book system that aggregates contacts across multiple providers.
+- **Providers**: Microsoft Graph (Office 365), native Windows Contact store, and Gmail (Google People API).
+- **Architecture**: A modular `AddressBookOrchestrator` manages provider discovery and result merging.
+- **Search**: Integrated with the memory substrate for semantic contact retrieval using natural language.
+
+## 7. Quality Engineering & Testing
+
+AG-Visio adheres to high industrial standards for codebase health.
+- **Linting**: Standardized on **Ruff** for Python analysis, ensuring zero architectural violations and consistent formatting.
+- **Testing**: Comprehensive **Pytest** scaffold covering all core "brain" logic (Memory, Contacts, Agent tools).
+- **Verification**: automated test cycles ensure 100% reliability of critical business logic before deployment.
 
 ---
 

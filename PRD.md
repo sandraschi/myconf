@@ -1,24 +1,22 @@
 # AG-Visio Product Requirements Document (PRD)
 
-**Version**: 1.1  
-**Last Updated**: 2025-01-28  
+**Version**: 1.3  
+**Last Updated**: 2026-03-17  
 **Status**: Active Development
 
 ---
 
 ## Executive Summary
 
-AG-Visio is a professional video conferencing platform combining real-time communication with AI-powered voice assistance. Built on LiveKit and Next.js, it delivers enterprise-grade conferencing features with a modern, intuitive interface and intelligent agent capabilities.
+AG-Visio is a professional video conferencing platform combining real-time communication with AI-powered voice assistance. Built on LiveKit 1.x and Next.js, it delivers enterprise-grade conferencing features with a modern, intuitive interface and intelligent agent capabilities.
 
 ### Key Differentiators
-- **AI Voice Agent** with natural language understanding and context awareness
-- **Premium Glassmorphism UI** with Tailwind 4 and micro-animations
-- **Device Testing** before joining meetings
-- **Multi-room Support** with seamless switching
-- **Real-time Transcription** with speaker identification
-- **Remote Support Substrate**: Orchestrated `rustdesk-mcp` integration for industrial assistance.
-- **Inter-Agent Signaling**: Grid-wide state propagation and substrate orchestration.
-- **Advanced Logging**: Debugging and monitoring with correlation IDs.
+- **AI Voice Agent** with natural language understanding, turn-detection, and multimodal tool use.
+- **Long-term Memory Substrate**: Semantic RAG using LanceDB and FastEmbed for persistent context.
+- **Multimodal Contact Management**: Integrated address book for Windows, Office 365, and Gmail.
+- **Industrial Perception**: OCR and workspace awareness for agentic collaboration.
+- **Remote Support Bridge**: Integrated RustDesk and Agent-Mediated remote assistance.
+- **Premium Glassmorphism UI**: High-standard aesthetics with advanced viewport orchestration.
 
 ---
 
@@ -189,7 +187,26 @@ Provide a privacy-respecting, self-hostable video conferencing solution with AI 
 - **Cloud Substrate**: OpenAI (LLM), Deepgram (STT), ElevenLabs (TTS).
 - Requires Ollama with compatible model for local mode.
 
-### 7. Logging & Telemetry
+### 7. Memory & Context Awareness (Long-term)
+
+#### 7.1 Memory Substrate
+- **Vector Database**: Integrated `LanceDB` for high-performance, disk-based vector storage.
+- **Embedding Substrate**: Integrated `FastEmbed` for local text embedding generation (flagship performance, zero API cost).
+- **RAG Orchestration**: Semantic search across transcription history and external documentation.
+
+#### 7.2 Transcript Ingestion
+- Real-time serialization of meeting transcripts to vector indices.
+- Persistence across sessions for contextual recall ("Visio, what did we talk about last time?").
+
+### 8. Address Book Integration
+
+#### 8.1 Multi-Provider Orchestration
+- **Microsoft Graph**: Support for Office 365 contact synchronization.
+- **Windows Local**: Bridge to native Windows contact databases.
+- **Gmail**: Support for Google People API contacts.
+- **Semantic Filtering**: RAG-driven retrieval of contacts based on natural language queries.
+
+### 9. Logging & Telemetry
 
 #### 7.1 Telemetry Events
 - Dashboard mount/unmount
@@ -234,7 +251,9 @@ Provide a privacy-respecting, self-hostable video conferencing solution with AI 
 
 ### Backend / Agent Stack
 - **Python 3.11+**
-- **livekit-agents** framework
+- **livekit-agents** 1.x (VoicePipelineAgent)
+- **LanceDB** for vector storage
+- **FastEmbed** for local embeddings
 - **Ollama** for LLM
 - **Whisper** for STT
 - **Piper** for TTS
@@ -417,6 +436,9 @@ Provide a privacy-respecting, self-hostable video conferencing solution with AI 
 - **Response time**: < 2 seconds
 - **False activation rate**: < 5%
 - **Transcription accuracy**: > 90% WER (Word Error Rate)
+- **Memory Recall Depth**: > 95% semantic retrieval accuracy
+- **Substrate Reliability**: 100% pass rate on core brain unit tests
+- **System Quality**: 0 lint violations (Ruff standardized)
 
 ---
 

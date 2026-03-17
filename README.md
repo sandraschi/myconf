@@ -6,12 +6,14 @@ AG-Visio provides a complete environment for collaborative work, combining high-
 
 ## Key Features
 
-- **Video Conferencing**: Real-time multi-room video and audio powered by LiveKit.
-- **AI Voice Assistant**: A local-first assistant ("Visio") that joins rooms and assists via natural language.
-- **Remote Assistance**: Embedded RustDesk bridge for seamless remote control support within the browser.
-- **Dynamic Layouts**: Intelligent focus mode that automatically promotes active screen shares.
-- **Memory & Search**: Searchable knowledge base and conversation history using local vector storage (LanceDB).
-- **System Monitoring**: Comprehensive MCP server for monitoring hardware health, Git status, and system logs.
+- **Video Conferencing**: Real-time multi-room video and audio powered by LiveKit 1.x / SDK v2.
+- **AI Voice Assistant**: A local-first assistant ("Visio") with End-of-Utterance detection and multimodal tool use.
+- **Remote Assistance**: Embedded RustDesk bridge and Agent-Mediated remote assistance tools.
+- **Dynamic Layouts**: Intelligent focus mode and manual viewport promotion.
+- **Long-term Memory**: High-performance semantic search and transcription RAG using **LanceDB** and **FastEmbed**.
+- **Perception & Awareness**: Industrial OCR pipeline and multi-agent signaling for workspace intelligence.
+- **Address Book Integration**: Searchable cross-platform contacts (Windows, Office 365, Gmail).
+- **Industrial Quality**: Codebase standardized with **Ruff** and verified via an extensive **Pytest** scaffold.
 
 ---
 

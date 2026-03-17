@@ -20,6 +20,7 @@ import ChatPanel from "@/components/ChatPanel";
 import RustDeskPanel from "@/components/RustDeskPanel";
 import RemoteAssistanceOverlay from "@/components/RemoteAssistanceOverlay";
 import { AgentFleetPanel } from "@/components/AgentFleetPanel";
+import ContactPanel from "@/components/ContactPanel";
 import { telemetry } from "@/lib/telemetry";
 import { useSettings } from "@/lib/settings";
 import { useDiscovery } from "@/lib/discovery";
@@ -48,7 +49,7 @@ export default function ModConsDashboard() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isLogViewerOpen, setIsLogViewerOpen] = useState(false);
-  const [rightPanelTab, setRightPanelTab] = useState<"transcript" | "chat" | "remote" | "fleet">("transcript");
+  const [rightPanelTab, setRightPanelTab] = useState<"transcript" | "chat" | "remote" | "fleet" | "contacts">("transcript");
   const [focusedTrackSid, setFocusedTrackSid] = useState<string | null>(null);
   const hasAppliedRoomParam = useRef(false);
   const deviceValidation = usePreJoinValidation(settings);
@@ -159,6 +160,7 @@ export default function ModConsDashboard() {
             document.dispatchEvent(event);
           }}
           onLoggerClick={() => setIsLogViewerOpen(true)}
+          onContactsClick={() => setRightPanelTab("contacts")}
           onRoomChange={handleRoomChange}
           onLogout={handleLogout}
           availableRooms={
@@ -253,6 +255,16 @@ export default function ModConsDashboard() {
                   >
                     Fleet
                   </button>
+                  <button
+                    type="button"
+                    onClick={() => setRightPanelTab("contacts")}
+                    className={`flex-1 px-4 py-3 text-xs font-semibold uppercase tracking-wider transition-colors ${rightPanelTab === "contacts"
+                      ? "bg-neutral-800 text-white border-b-2 border-blue-500"
+                      : "text-gray-500 hover:text-gray-300"
+                      }`}
+                  >
+                    Contacts
+                  </button>
                 </div>
                 <div className="flex-1 min-h-0 overflow-hidden">
                   {rightPanelTab === "transcript" ? (
@@ -263,9 +275,13 @@ export default function ModConsDashboard() {
                     <ChatPanel />
                   ) : rightPanelTab === "remote" ? (
                     <RustDeskPanel />
-                  ) : (
+                  ) : rightPanelTab === "fleet" ? (
                     <div className="h-full p-4 overflow-y-auto">
                       <AgentFleetPanel />
+                    </div>
+                  ) : (
+                    <div className="h-full p-2">
+                       <ContactPanel />
                     </div>
                   )}
                 </div>

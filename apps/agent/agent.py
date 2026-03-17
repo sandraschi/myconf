@@ -17,10 +17,8 @@ import os
 import sys
 from typing import Annotated, Any
 
-import lancedb
 import ollama
 from dotenv import load_dotenv
-from fastembed import TextEmbedding
 from livekit import rtc
 from livekit.agents import (
     JobContext,
@@ -40,6 +38,7 @@ from livekit.plugins import (
 )
 from livekit.plugins import piper_tts as piper
 
+from contacts_substrate import ContactManager
 from logic import ReductionistLogic
 from memory_substrate import MemorySubstrate
 from state_bus import StateBus
@@ -100,8 +99,7 @@ class SOTAOllamaLLMStream(LLMStream):
                 if isinstance(content, list):
                     # Flatten content blocks to plain text for Ollama
                     content = " ".join(
-                        block.text if hasattr(block, "text") else str(block)
-                        for block in content
+                        block.text if hasattr(block, "text") else str(block) for block in content
                     )
                 messages.append({"role": msg.role, "content": content or ""})
 
@@ -185,30 +183,72 @@ class SOTAOllamaLLM(llm.LLM):
 class VisioTools(llm.FunctionContext):
     """SOTA 2026: Agent-native tool context for discourse analysis."""
 
-    def __init__(self, logic: ReductionistLogic, memory: MemorySubstrate, room: rtc.Room):
+    def __init__(
+        self,
+        logic: ReductionistLogic,
+        memory: MemorySubstrate,
+        room: rtc.Room,
+        contacts: ContactManager,
+    ):
         super().__init__()
         self._logic = logic
         self._memory = memory
         self._room = room
+        self._contacts = contacts
 
-    @llm.ai_callable(description="Search the local knowledge base for repository context or past conversation history.")
+    @llm.ai_callable(
+        description="Search the user's address book (Windows/Office) for contact information."
+    )
+    async def search_contacts(
+        self,
+        query: Annotated[str, "The name, email, or company to search for in the address book."],
+    ) -> str:
+        """SOTA 2026: Contact discovery substrate."""
+        logger.info("Visio searching contacts for: %s", query)
+        results = self._contacts.search(query)
+        if not results:
+            return f"No matches found for '{query}' in the address book."
+
+        output = ["### Contact Matches:"]
+        for c in results:
+            output.append(f"- {c.name} ({c.email or 'No email'}) [Source: {c.source}]")
+        return "\n".join(output)
+
+    @llm.ai_callable(
+        description="Synchronize the address book with Microsoft Office and Windows Local contacts."
+    )
+    async def sync_contacts(self) -> str:
+        """SOTA 2026: Contact synchronization trigger."""
+        logger.info("Visio triggering full contact sync...")
+        contacts = await self._contacts.sync_all()
+        return f"SUCCESS: Synchronized {len(contacts)} contacts from Windows and Office substrate."
+
+    @llm.ai_callable(
+        description=(
+            "Search the local knowledge base for repository context or past conversation history."
+        )
+    )
     async def search_knowledge_base(
         self,
-        query: Annotated[str, "The semantic search query (e.g., 'corporate summer plans' or 'how does screen share work?')"],
+        query: Annotated[
+            str,
+            "The semantic search query (e.g., 'corporate summer plans' or 'how does screen share "
+            "work?')",
+        ],
     ) -> str:
         """SOTA 2026: Semantic retrieval substrate."""
         logger.info("Visio querying memory substrate for: %s", query)
-        
+
         # Concurrent retrieval
         history_hits = self._memory.query_history(query, limit=3)
         code_hits = self._memory.query_codebase(query, limit=2)
-        
+
         results = []
         if history_hits:
             results.append("### Relevant Conversation History:")
             for hit in history_hits:
                 results.append(f"- [{hit.get('speaker')}]: {hit.get('text')}")
-        
+
         if code_hits:
             results.append("### Relevant Code Snippets:")
             for hit in code_hits:
@@ -216,7 +256,7 @@ class VisioTools(llm.FunctionContext):
 
         if not results:
             return "No relevant historical or technical context found for this query."
-            
+
         return "\n".join(results)
 
     @llm.ai_callable(description="Analyzes discourse for semantic dilution or jargon overflow.")
@@ -269,13 +309,15 @@ async def entrypoint(ctx: JobContext) -> None:
     # SOTA 2026: Phase 5 Memory Substrate
     memory = MemorySubstrate()
     # Lazy index: in industrial use, this would be a background task
-    # memory.index_project(".") 
+    # memory.index_project(".")
 
     vision = VisionSubstrate(mode=AGENT_MODE)
     bus = StateBus()
     await bus.connect()
 
-    await ctx.connect()
+    # SOTA 2026: Phase 8 Contact Substrate
+    contacts = ContactManager()
+    contacts.load_cache()
 
     try:
         vad = silero.VAD.load()
@@ -299,7 +341,7 @@ async def entrypoint(ctx: JobContext) -> None:
                 model=os.environ.get("OLLAMA_MODEL", "gemma2"),
                 base_url=OLLAMA_BASE_URL,
             )
-        
+
         @ctx.room.on("data_received")
         def on_data_received(data: rtc.DataPacket):
             """SOTA 2026: Secure credential handoff listener."""
@@ -321,7 +363,7 @@ async def entrypoint(ctx: JobContext) -> None:
             tts=tts,
             turn_detector=turn_detector.EOUModel(),
             chat_ctx=initial_ctx,
-            fnc_ctx=VisioTools(logic_engine, memory, ctx.room),
+            fnc_ctx=VisioTools(logic_engine, memory, ctx.room, contacts),
         )
 
         @assistant.on("user_speech_committed")
@@ -330,7 +372,7 @@ async def entrypoint(ctx: JobContext) -> None:
             if isinstance(msg.content, str):
                 # SOTA 2026: Real-time RAG ingestion
                 memory.ingest_transcript(msg.content, speaker="User", room_name=ctx.room.name)
-                
+
                 saliency = logic_engine.analyze_saliency(msg.content)
                 logger.info(
                     "User speech committed (saliency: %.2f) and ingested into RAG: %s",
@@ -355,22 +397,35 @@ async def entrypoint(ctx: JobContext) -> None:
         assistant.before_llm_cb = _before_llm_cb
 
         @ctx.room.on("track_published")
-        def on_track_published(publication: rtc.TrackPublication, participant: rtc.RemoteParticipant):
+        def on_track_published(
+            publication: rtc.TrackPublication, participant: rtc.RemoteParticipant
+        ):
             if publication.source == rtc.TrackSource.SOURCE_SCREEN_SHARE:
-                logger.info("SOTA: Screen share detected from %s. Attaching vision node.", participant.identity)
-                
+                logger.info(
+                    "SOTA: Screen share detected from %s. Attaching vision node.",
+                    participant.identity,
+                )
+
                 @publication.on("frame_received")
                 async def on_frame_received(frame: rtc.VideoFrame):
                     # Periodically analyze frames for saliency/OCR
                     # [MOCK] Throttle to 1 fps for industrial efficiency
-                    if rtc.get_time() % 1000 < 100: 
+                    if rtc.get_time() % 1000 < 100:
                         text = await vision.process_video_frame(frame)
                         if text:
                             # Publish to inter-agent state bus (Redis)
-                            await bus.publish_state(ctx.room.local_participant.identity, {"ocr": text})
-                            
+                            await bus.publish_state(
+                                ctx.room.local_participant.identity, {"ocr": text}
+                            )
+
                             # Publish to frontend via LiveKit Data Channel (Secure)
-                            payload = json.dumps({"type": "fleet_update", "agent": ctx.room.local_participant.identity, "ocr": text})
+                            payload = json.dumps(
+                                {
+                                    "type": "fleet_update",
+                                    "agent": ctx.room.local_participant.identity,
+                                    "ocr": text,
+                                }
+                            )
                             await ctx.room.local_participant.publish_data(payload.encode())
 
         logger.info("Visio starting upgraded participation loop...")

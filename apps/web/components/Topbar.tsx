@@ -9,6 +9,7 @@ import {
   Settings as SettingsIcon,
   ChevronDown,
   Share2,
+  Users as UsersIcon,
 } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
@@ -29,6 +30,7 @@ interface TopbarProps {
   onLogout?: () => void;
   availableRooms?: string[];
   roomsWithCount?: RoomInfo[];
+  onContactsClick: () => void;
 }
 
 export default function Topbar({
@@ -41,6 +43,7 @@ export default function Topbar({
   onLogout,
   availableRooms = ["ag-visio-conference", "development", "testing"],
   roomsWithCount = [],
+  onContactsClick,
 }: TopbarProps) {
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [isRoomMenuOpen, setIsRoomMenuOpen] = useState(false);
@@ -170,6 +173,15 @@ export default function Topbar({
           title="View Logs"
         >
           <Terminal className="w-5 h-5" />
+        </button>
+
+        {/* Contacts Button */}
+        <button
+          onClick={onContactsClick}
+          className="p-2 text-gray-400 hover:text-white hover:bg-neutral-800 rounded-lg transition-colors"
+          title="Address Book"
+        >
+          <UsersIcon className="w-5 h-5" />
         </button>
 
         {/* User Menu */}

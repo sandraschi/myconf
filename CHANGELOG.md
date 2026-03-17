@@ -7,6 +7,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-03-17
+
+### Added
+- **Long-term Memory Substrate:**
+    - Integrated `LanceDB` for high-performance vector storage and semantic recall.
+    - Implemented `FastEmbed` for local text embeddings without external API dependency.
+    - Automated transcript ingestion pipeline for meeting history persistence.
+- **Multimodal Address Book Integration:**
+    - **Microsoft Graph:** Sync support for Office 365 contacts.
+    - **Windows Local:** Native Windows contact provider orchestration.
+    - **Gmail (Google):** Integration for Google People API contacts.
+    - **Semantic Search:** RAG-driven contact retrieval via `memory_substrate`.
+- **Autonomous Perception & Orchestration:**
+    - **Industrial OCR:** Added `IndustrialPerception` tool for workspace awareness.
+    - **Multi-Agent Signaling:** Enhanced inter-agent communication via LiveKit data channels.
+- **Unified Startup Orchestrator:**
+    - Implemented `start.ps1` and `start.bat` for "One-Click" full-stack initialization.
+    - Automated dependency detection and environment setup (Node/Python).
+
+### Fixed
+- **Quality Engineering:**
+    - Standardized Python codebase using **Ruff**, resolving 28+ linting and architectural warnings.
+    - Established comprehensive `pytest` scaffold with 100% pass rate on core brain substrates.
+    - Improved agent tool delegation logic between `agent.py` and modular substrates.
+
 ## [0.2.0] - 2026-03-15
 
 ### Added
