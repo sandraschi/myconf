@@ -3,7 +3,7 @@
 import { useRoomContext } from "@livekit/components-react";
 import { RoomEvent } from "livekit-client";
 import { useEffect, useState } from "react";
-import { Shield, ShieldAlert, Key, X, Monitor } from "lucide-react";
+import { Shield, ShieldAlert, X, Monitor, ChevronRight } from "lucide-react";
 
 export default function RemoteAssistanceOverlay() {
   const room = useRoomContext();
@@ -39,9 +39,7 @@ export default function RemoteAssistanceOverlay() {
     setIsSending(true);
 
     const payload = JSON.stringify({
-      type: "remote_credentials",
-      id,
-      password,
+      type: "grant_native_access",
     });
 
     try {
@@ -78,33 +76,13 @@ export default function RemoteAssistanceOverlay() {
             </p>
           </div>
 
-          <div className="space-y-4">
-            <div className="space-y-1.5">
-              <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest ml-1">RustDesk ID</label>
-              <div className="relative">
-                <Monitor className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" size={14} />
-                <input
-                  type="text"
-                  placeholder="000 000 000"
-                  className="w-full pl-10 pr-4 py-3 bg-neutral-900 border border-white/10 rounded-xl text-white font-mono placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all"
-                  value={id}
-                  onChange={(e) => setId(e.target.value)}
-                />
-              </div>
-            </div>
-
-            <div className="space-y-1.5">
-              <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest ml-1">Security Password</label>
-              <div className="relative">
-                <Key className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" size={14} />
-                <input
-                  type="password"
-                  placeholder="••••••••"
-                  className="w-full pl-10 pr-4 py-3 bg-neutral-900 border border-white/10 rounded-xl text-white font-mono placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                />
-              </div>
+          <div className="bg-white/5 rounded-2xl p-4 mb-6 border border-white/5 flex items-center gap-3">
+            <Monitor className="text-blue-400" size={20} />
+            <div>
+              <p className="text-sm font-semibold text-white">Full Native Control</p>
+              <p className="text-[10px] text-gray-500 font-mono italic">
+                Enables mouse/keyboard injection via SOTA Substrate.
+              </p>
             </div>
           </div>
 
@@ -118,7 +96,7 @@ export default function RemoteAssistanceOverlay() {
             </button>
             <button
               onClick={handleGrant}
-              disabled={!id || !password || isSending}
+              disabled={isSending}
               className="px-6 py-3 flex-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white rounded-xl font-semibold transition-all shadow-lg shadow-blue-500/20 flex items-center justify-center gap-2"
             >
               {isSending ? (
@@ -126,7 +104,8 @@ export default function RemoteAssistanceOverlay() {
               ) : (
                 <Shield size={18} />
               )}
-              Grant Access
+              Start Remoting
+              <ChevronRight size={14} className="opacity-50" />
             </button>
           </div>
         </div>

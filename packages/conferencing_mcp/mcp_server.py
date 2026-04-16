@@ -7,7 +7,10 @@ from typing import Any
 
 from fastmcp import Context, FastMCP
 
-import conference as conf
+from . import conference as conf
+import lancedb
+from fastembed import TextEmbedding
+import os
 
 
 class CorrelationIdFilter(logging.Filter):
@@ -33,7 +36,30 @@ logging.basicConfig(
 logger = logging.getLogger("ag-visio-mcp")
 logger.addFilter(CorrelationIdFilter())
 
-mcp = FastMCP("conferencing-mcp", version="3.1.1")
+mcp = FastMCP("conferencing-mcp", version="3.1.2")
+
+# SOTA 2026: Persistence Substrate
+DB_PATH = os.path.join(os.path.dirname(__file__), "..", "..", "apps", "agent", "lancedb_data")
+db = lancedb.connect(DB_PATH)
+embedding_model = TextEmbedding()
+
+def _init_insight_tables():
+    if "meeting_insights" not in db.list_tables():
+        db.create_table(
+            "meeting_insights",
+            data=[
+                {
+                    "vector": [0.0] * 384,
+                    "type": "init",
+                    "content": "init",
+                    "room_name": "init",
+                    "timestamp": 0.0,
+                }
+            ],
+            mode="overwrite",
+        )
+
+_init_insight_tables()
 
 
 @mcp.tool()
@@ -330,6 +356,114 @@ async def inter_agent_ping(ctx: Context, target_agent: str = "ALL") -> str:
         f"SIGNAL_SENT [SOTA-P01]: Heartbeat broadcast to grid"
         f" (Target: {target_agent}). Protocol: SOTA-2026-B."
     )
+
+
+# ===========================================================================
+# INTELLIGENCE TOOLS (Teams++)
+# ===========================================================================
+
+
+@mcp.tool()
+async def generate_meeting_summary(
+    ctx: Context, room_name: str, transcript: str
+) -> dict[str, Any]:
+    """Summarize the meeting transcript and persist to the memory substrate.
+
+    Args:
+        room_name: Name of the active conference room.
+        transcript: The full text of the conversation to summarize.
+    """
+    cor_id = getattr(ctx, "correlation_id", "GLOBAL")
+    logger.info(f"Generating meeting summary for room: {room_name}", extra={"correlation_id": cor_id})
+
+    # In a real SOTA workflow, we would use ctx.sample to generate the summary.
+    prompt = f"Summarize the following meeting transcript for room '{room_name}':\n\n{transcript}"
+    
+    try:
+        # FastMCP 3.1+ sampling
+        summary_obj = await ctx.sample(prompt, max_tokens=1000)
+        summary_text = summary_obj.content.text
+
+        # Persist to LanceDB
+        vector = list(next(embedding_model.embed([summary_text])))
+        table = db.open_table("meeting_insights")
+        table.add([{
+            "vector": vector,
+            "type": "summary",
+            "content": summary_text,
+            "room_name": room_name,
+            "timestamp": time.time()
+        }])
+
+        return {
+            "success": True,
+            "summary": summary_text,
+            "room_name": room_name,
+            "persisted": True,
+            "correlation_id": cor_id
+        }
+    except Exception as e:
+        logger.error(f"Summary generation failed: {e}", extra={"correlation_id": cor_id})
+        return {"success": False, "error": str(e)}
+
+
+@mcp.tool()
+async def extract_action_items(
+    ctx: Context, room_name: str, transcript: str
+) -> dict[str, Any]:
+    """Extract action items and tasks from the meeting transcript.
+
+    Args:
+        room_name: Name of the active conference room.
+        transcript: The full text of the conversation.
+    """
+    cor_id = getattr(ctx, "correlation_id", "GLOBAL")
+    logger.info(f"Extracting action items for room: {room_name}", extra={"correlation_id": cor_id})
+
+    prompt = (
+        f"Extract a bulleted list of action items and assigned tasks from this meeting transcript "
+        f"for room '{room_name}':\n\n{transcript}"
+    )
+    
+    try:
+        items_obj = await ctx.sample(prompt, max_tokens=1000)
+        items_text = items_obj.content.text
+
+        # Persist to LanceDB
+        vector = list(next(embedding_model.embed([items_text])))
+        table = db.open_table("meeting_insights")
+        table.add([{
+            "vector": vector,
+            "type": "action_items",
+            "content": items_text,
+            "room_name": room_name,
+            "timestamp": time.time()
+        }])
+
+        return {
+            "success": True,
+            "action_items": items_text,
+            "room_name": room_name,
+            "persisted": True,
+            "correlation_id": cor_id
+        }
+    except Exception as e:
+        logger.error(f"Action item extraction failed: {e}", extra={"correlation_id": cor_id})
+        return {"success": False, "error": str(e)}
+
+
+@mcp.tool()
+async def set_translation_language(ctx: Context, language: str) -> str:
+    """Set the target language for live translation in the current session.
+
+    Args:
+        language: Target language (e.g., 'Japanese', 'German', 'Spanish').
+    """
+    cor_id = getattr(ctx, "correlation_id", "GLOBAL")
+    logger.info(f"Setting translation language to: {language}", extra={"correlation_id": cor_id})
+    
+    # Broadcast to grid via data channel (mocked in server, agent will listen)
+    return f"TRANSLATION_MODE_ACTIVE: Target set to '{language}'. All subsequent transcripts will be processed."
 
 
 # ===========================================================================

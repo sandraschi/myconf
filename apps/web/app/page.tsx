@@ -14,6 +14,7 @@ import { Loader2 } from "lucide-react";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import Topbar from "@/components/Topbar";
 import LogViewer from "@/components/LogViewer";
+import { MeetingIntelligencePanel } from "@/components/MeetingIntelligencePanel";
 import AgentStatus from "@/components/AgentStatus";
 import ReconnectionBanner from "@/components/ReconnectionBanner";
 import ChatPanel from "@/components/ChatPanel";
@@ -49,7 +50,7 @@ export default function ModConsDashboard() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isLogViewerOpen, setIsLogViewerOpen] = useState(false);
-  const [rightPanelTab, setRightPanelTab] = useState<"transcript" | "chat" | "remote" | "fleet" | "contacts">("transcript");
+  const [rightPanelTab, setRightPanelTab] = useState<"transcript" | "chat" | "remote" | "fleet" | "contacts" | "intelligence">("intelligence");
   const [focusedTrackSid, setFocusedTrackSid] = useState<string | null>(null);
   const hasAppliedRoomParam = useRef(false);
   const deviceValidation = usePreJoinValidation(settings);
@@ -265,6 +266,16 @@ export default function ModConsDashboard() {
                   >
                     Contacts
                   </button>
+                  <button
+                    type="button"
+                    onClick={() => setRightPanelTab("intelligence")}
+                    className={`flex-1 px-4 py-3 text-xs font-semibold uppercase tracking-wider transition-colors ${rightPanelTab === "intelligence"
+                      ? "bg-neutral-800 text-white border-b-2 border-indigo-500"
+                      : "text-gray-500 hover:text-gray-300"
+                      }`}
+                  >
+                    Intelligence
+                  </button>
                 </div>
                 <div className="flex-1 min-h-0 overflow-hidden">
                   {rightPanelTab === "transcript" ? (
@@ -279,6 +290,8 @@ export default function ModConsDashboard() {
                     <div className="h-full p-4 overflow-y-auto">
                       <AgentFleetPanel />
                     </div>
+                  ) : rightPanelTab === "intelligence" ? (
+                    <MeetingIntelligencePanel room={useRoomContext()} />
                   ) : (
                     <div className="h-full p-2">
                        <ContactPanel />

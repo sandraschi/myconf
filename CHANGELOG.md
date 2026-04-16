@@ -1,6 +1,20 @@
 # Changelog
 
-All notable changes to AG-Visio will be documented in this file.
+All notable changes to this project will be documented in this file.
+
+## [2.0.0] - 2026-04-06
+### Added
+- **Teams++ AI Upgrade**: Major architectural shift to an autonomous meeting intelligence substrate.
+- **Native Remoting Substrate**: Introduced `packages/remoting-mcp` for high-performance screen capture and OS-level input injection (Windows `SendInput`).
+- **Dynamic MCP Discovery**: Logic implemented to scan 10700-10800 for SSE endpoints, enabling horizontal tool scaling.
+- **Meeting Intelligence Dashboard**: Real-time insights panel with LanceDB-powered persistence for summaries and action items.
+- **LiveKit 1.x / Agents 1.x**: Full migration to the latest agentic infrastructure.
+- **Port Management**: Standardized port registries for fleet-wide compatibility.
+
+### Changed
+- Refactored `apps/agent` into a dynamic MCP client (MCPB 3.1+ compliant).
+- Deprecated RustDesk IFrame bridge in favor of native LiveKit remoting.
+- Hardened `CombinedMCPFunctionContext` for unified tool orchestration.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).

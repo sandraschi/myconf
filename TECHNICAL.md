@@ -7,6 +7,7 @@ This document provides a deep dive into the underlying architecture, protocols, 
 AG-Visio utilizes [LiveKit](https://livekit.io/) as its primary RTC engine. 
 - **Infrastructure**: Distributed via Docker Compose with a dedicated Redis instance for state management.
 - **Protocols**: WebRTC for video/audio streams, WebSockets for room signaling.
+- **Teams++ Native Tracks**: High-fidelity screen capture via the `remoting-mcp` substrate, utilizing native `VideoTrack` publishing.
 - **Egress**: Used for session recording and external streaming when configured.
 
 ## 2. AI Voice Assistant (Visio)
@@ -27,18 +28,21 @@ The voice assistant is built on a modular "perception-action" loop using local-f
 - **Quality**: ONNX-based high-speed synthesis with low CPU overhead.
 - **Voice**: Standardized on neutral, high-clarity models.
 
-## 3. Remote Assistance (RustDesk)
+## 3. Remote Control Substrate (remoting-mcp)
 
-Remote support is embedded directly into the browser dashboard.
-- **Integration**: Uses the RustDesk relay bridge to tunnel traffic via the host.
-- **Security**: End-to-end encrypted sessions with local ID verification.
+AG-Visio 2.0 features a native remoting substrate that replaces the previous RustDesk IFrame bridge.
+- **Implementation**: A specialized MCP server (`remoting-mcp`) running on the target PC.
+- **Visuals**: Captures the primary monitor using `mss` and publishes it to the LiveKit room as a high-performance video track.
+- **Input Injection**: Implements OS-level mouse and keyboard injection using the Windows `SendInput` API (via `pynput`).
+- **Security**: Granular "Grant Access" workflow with explicit consent required for input substrate attachment.
 
-## 4. Hardware & System Monitoring (MCP)
+## 4. Dynamic MCP Discovery & Intelligence
 
-AG-Visio implements the **Model Context Protocol (MCP)** to provide the assistant with environmental awareness.
+AG-Visio implements a decentralized **Model Context Protocol (MCP)** architecture.
+- **Dynamic Discovery**: The agent performs a non-blocking scan of the 10700-10800 port range on startup to discover local SSE endpoints.
+- **Combined Context**: Uses a `CombinedMCPFunctionContext` to unify local monitoring, remote control, and external tools (e.g., LiveKit Docs MCP).
+- **Meeting Intelligence**: The `conferencing-mcp` server provides automated summarization and action item extraction, persisted to a **LanceDB** vector store for long-term recall.
 - **Metrics**: Real-time tracking of GPU VRAM (for Ollama health), CPU load, and disk occupancy.
-- **Git Integration**: Automated status reporting for the monorepo.
-- **Extensibility**: Standardized JSON-RPC interface for adding new monitoring tools.
 
 ## 6. Multimodal Address Book
 
