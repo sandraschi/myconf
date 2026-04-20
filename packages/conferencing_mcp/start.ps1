@@ -1,4 +1,14 @@
-# start.ps1 — SOTA 2026 Startup Script
+﻿Param([switch]$Headless)
+
+# --- SOTA Headless Standard ---
+if ($Headless -and ($Host.UI.RawUI.WindowTitle -notmatch 'Hidden')) {
+    Start-Process pwsh -ArgumentList '-NoProfile', '-File', $PSCommandPath, '-Headless' -WindowStyle Hidden
+    exit
+}
+$WindowStyle = if ($Headless) { 'Hidden' } else { 'Normal' }
+# ------------------------------
+
+# start.ps1 â€” SOTA 2026 Startup Script
 # Industrial-grade process management for conferencing-mcp
 
 $PORT = 10720
@@ -17,3 +27,4 @@ if ($process) {
 Write-Host "[EXEC] Launching FastMCP server..." -ForegroundColor Green
 # We use -u for unbuffered output to ensure logs capture in real-time
 python -u mcp_server.py sse --port $PORT
+

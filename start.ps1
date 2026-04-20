@@ -1,48 +1,15 @@
-# AG-Visio Fleet Orchestrator | Sandra Schipal | SOTA 2026
-# Unified Startup Substrate for Web UI and Voice Agent
+Param([switch]$Headless)
 
-$WebPort = 10886
-$AgentPort = 10887
-
-# 0. Initial Setup Verification
-if (!(Test-Path "node_modules") -or !(Test-Path "apps\agent\venv")) {
-    Write-Host "Sandra: Missing dependency substrate. Launching first-run initialization..." -ForegroundColor Cyan
-    & .\setup.ps1
-    if ($LASTEXITCODE -ne 0) {
-        Write-Host "Sandra: Critical failure during initialization. Aborting." -ForegroundColor Red
-        exit 1
-    }
+# --- SOTA Headless Standard ---
+if ($Headless -and ($Host.UI.RawUI.WindowTitle -notmatch 'Hidden')) {
+    Start-Process pwsh -ArgumentList '-NoProfile', '-File', $PSCommandPath, '-Headless' -WindowStyle Hidden
+    exit
 }
+$WindowStyle = if ($Headless) { 'Hidden' } else { 'Normal' }
+# ------------------------------
 
-# 1. Port Cleansing
-Write-Host "Sandra: Cleansing substrate ports..." -ForegroundColor Yellow
-npx --yes kill-port $WebPort, $AgentPort 2>$null
+$env:FASTMCP_LOG_LEVEL = 'WARNING'
+# myconf Start - Standards-Compliant SOTA
+Write-Host 'Starting myconf...' -ForegroundColor Cyan
 
-# 2. Dependency Health Checks
-Write-Host "Sandra: Verifying dependency grid (Ollama/Redis)..." -ForegroundColor Yellow
-
-# Check Ollama
-try {
-    Invoke-WebRequest -Uri "http://localhost:11434/api/tags" -UseBasicParsing -ErrorAction Stop > $null
-    Write-Host "  [OK] Ollama Substrate Active" -ForegroundColor Green
-} catch {
-    Write-Host "  [ERROR] Ollama not detected! Please start Ollama before proceeding." -ForegroundColor Red
-    exit 1
-}
-
-# Check Redis (Standard port 6379)
-if (Get-NetTCPConnection -LocalPort 6379 -ErrorAction SilentlyContinue) {
-    Write-Host "  [OK] Redis Substrate Active" -ForegroundColor Green
-} else {
-    Write-Host "  [WARNING] Redis not detected on 6379. Multi-agent state sync may be degraded." -ForegroundColor DarkYellow
-}
-
-# 3. Launch Agent Substrate (Separate Window)
-Write-Host "Sandra: Launching Voice Agent substrate..." -ForegroundColor Green
-Start-Process powershell -ArgumentList "-NoExit", "-Command", "Set-Location apps\agent; .\start.ps1" -WindowStyle Normal
-
-# 4. Launch Web UI (Current Window)
-Write-Host "Sandra: Launching Web UI substrate..." -ForegroundColor Green
-Set-Location apps\web
-.\start.ps1
-
+uv run -m myconf

@@ -1,3 +1,13 @@
+﻿Param([switch]$Headless)
+
+# --- SOTA Headless Standard ---
+if ($Headless -and ($Host.UI.RawUI.WindowTitle -notmatch 'Hidden')) {
+    Start-Process pwsh -ArgumentList '-NoProfile', '-File', $PSCommandPath, '-Headless' -WindowStyle Hidden
+    exit
+}
+$WindowStyle = if ($Headless) { 'Hidden' } else { 'Normal' }
+# ------------------------------
+
 # Sandra Schipal | SOTA 2026 | Agent Startup Protocol
 # Port: 10887 (myconf backend)
 
@@ -16,3 +26,4 @@ if (Test-Path "venv\Scripts\Activate.ps1") {
 
 # Run the agent with dev mode and explicit port
 python agent.py dev --http-port $WebPort
+

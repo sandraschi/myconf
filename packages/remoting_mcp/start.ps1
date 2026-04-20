@@ -1,3 +1,13 @@
+﻿Param([switch]$Headless)
+
+# --- SOTA Headless Standard ---
+if ($Headless -and ($Host.UI.RawUI.WindowTitle -notmatch 'Hidden')) {
+    Start-Process pwsh -ArgumentList '-NoProfile', '-File', $PSCommandPath, '-Headless' -WindowStyle Hidden
+    exit
+}
+$WindowStyle = if ($Headless) { 'Hidden' } else { 'Normal' }
+# ------------------------------
+
 # SOTA 2026: remoting-mcp startup
 # Standardized port: 10725
 # ---------------------------------------------------------------------------
@@ -23,3 +33,4 @@ if (-not (Test-Path ".venv")) {
 # 3. Start FastMCP on port 10725 (SSE)
 Write-Host "Targeting Port Substrate 10725..." -ForegroundColor Cyan
 ./.venv/Scripts/python mcp_server.py
+
