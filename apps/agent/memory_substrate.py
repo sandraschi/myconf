@@ -27,7 +27,8 @@ class MemorySubstrate:
     def _init_tables(self):
         """Initialize LanceDB tables for different context types."""
         # Note: We use simple dicts for inference, but ensured types
-        if "transcripts" not in self.db.table_names():
+        existing = self.db.list_tables()
+        if "transcripts" not in existing:
             self.db.create_table(
                 "transcripts",
                 data=[
@@ -42,7 +43,7 @@ class MemorySubstrate:
                 mode="overwrite",
             )
 
-        if "codebase" not in self.db.table_names():
+        if "codebase" not in existing:
             self.db.create_table(
                 "codebase",
                 data=[
@@ -57,7 +58,7 @@ class MemorySubstrate:
                 mode="overwrite",
             )
 
-        if "mission_logs" not in self.db.table_names():
+        if "mission_logs" not in existing:
             self.db.create_table(
                 "mission_logs",
                 data=[{"vector": [0.0] * 384, "text": "init", "status": "init", "timestamp": 0.0}],
@@ -120,9 +121,7 @@ class MemorySubstrate:
                                         "vector": vector,
                                         "text": chunk,
                                         "file_path": os.path.relpath(path, root_dir),
-                                        "line_range": (
-                                            f"{i * 20}-{(i + 1) * 20}"
-                                        ),  # Loose approximation
+                                        "line_range": (f"{i * 20}-{(i + 1) * 20}"),  # Loose approximation
                                         "metadata": json.dumps({"type": "code"}),
                                     }
                                 )

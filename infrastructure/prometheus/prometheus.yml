@@ -1,0 +1,23 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+scrape_configs:
+  - job_name: "livekit"
+    static_configs:
+      - targets: ["host.docker.internal:15580"]
+        labels:
+          service: "livekit"
+
+  - job_name: "web-dashboard"
+    metrics_path: "/api/metrics"
+    static_configs:
+      - targets: ["host.docker.internal:15500"]
+        labels:
+          service: "web-dashboard"
+
+  - job_name: "redis"
+    static_configs:
+      - targets: ["host.docker.internal:16379"]
+        labels:
+          service: "redis"

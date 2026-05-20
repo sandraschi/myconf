@@ -1,62 +1,120 @@
 # AG-Visio Technical Reference
 
-This document provides a deep dive into the underlying architecture, protocols, and technology stack of the AG-Visio suite.
+> **This document covers protocol internals and deep implementation details.**
+> For architecture overview, see [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
+> For feature documentation, see [docs/FEATURES.md](docs/FEATURES.md).
 
 ## 1. Real-Time Communication (LiveKit)
 
-AG-Visio utilizes [LiveKit](https://livekit.io/) as its primary RTC engine. 
-- **Infrastructure**: Distributed via Docker Compose with a dedicated Redis instance for state management.
+AG-Visio utilizes [LiveKit](https://livekit.io/) as its primary RTC engine.
+
+- **Infrastructure**: Docker Compose with a dedicated Redis instance for state management.
 - **Protocols**: WebRTC for video/audio streams, WebSockets for room signaling.
-- **Teams++ Native Tracks**: High-fidelity screen capture via the `remoting-mcp` substrate, utilizing native `VideoTrack` publishing.
-- **Egress**: Used for session recording and external streaming when configured.
+- **Screen Capture**: The `remoting-mcp` substrate captures the primary monitor via `mss`, converts BGRA→I420, and publishes as a LiveKit `VideoTrack` at 15 FPS.
+- **Ports**: 15580 (WS), 15581 (WebRTC), 15582 (UDP media), 50000–60000 (dynamic RTC).
 
 ## 2. AI Voice Assistant (Visio)
 
-The voice assistant is built on a modular "perception-action" loop using local-first models to prioritize privacy and low latency.
+Built on a modular "perception-action" loop using local-first models.
 
-### Speech-to-Text (STT)
-- **Engine**: OpenAI Whisper (via `transformers` or `faster-whisper`).
-- **Processing**: Real-time audio chunking with Voice Activity Detection (VAD) to trigger inference.
+### Pipeline
 
-### Large Language Model (LLM)
+```
+User Speech → [Silero VAD] → [Whisper STT] → [Ollama LLM] → [Piper TTS] → Audio
+                               ↓                            ↓
+                         Text chunks                 Tool execution
+                               ↓                            ↓
+                        ChatContext              CombinedMCPFunctionContext
+```
+
+### Speech-to-Text
+- **Engine**: OpenAI Whisper (via `livekit-plugins-whisper`).
+- **Processing**: Real-time audio chunking with Silero VAD for gate control.
+- **Mode**: `local` uses local Whisper; `cloud` uses Deepgram.
+
+### Large Language Model
 - **Engine**: [Ollama](https://ollama.com/) running on the local host.
-- **Default Model**: `gemma2:9b` (recommended for its balance of reasoning and performance).
-- **Context**: Managed via a sliding window to maintain character consistency.
+- **Default Model**: `gemma2` (recommended for balance of reasoning and performance).
+- **Adapter**: Custom `SOTAOllamaLLM` class implementing `livekit.agents.llm.LLM` interface.
+- **Streaming**: `SOTAOllamaLLMStream._run()` pushes tokens via `_event_ch.send_nowait()`.
 
-### Text-to-Speech (TTS)
-- **Engine**: [Piper](https://github.com/rhasspy/piper).
-- **Quality**: ONNX-based high-speed synthesis with low CPU overhead.
-- **Voice**: Standardized on neutral, high-clarity models.
+### Text-to-Speech
+- **Engine**: Piper (ONNX-based, low CPU overhead).
+- **Cloud Fallback**: OpenAI TTS when `AGENT_MODE=cloud`.
+
+### Function Calling
+
+The `CombinedMCPFunctionContext` exposes tools to the LLM via `@llm.ai_callable` decorators. Tools include:
+- Local: `search_contacts`, `search_knowledge_base`, `analyze_discourse`, `request_remote_access`
+- Dynamic: Any tool discovered from MCP servers in range 10700–10800
 
 ## 3. Remote Control Substrate (remoting-mcp)
 
-AG-Visio 2.0 features a native remoting substrate that replaces the previous RustDesk IFrame bridge.
-- **Implementation**: A specialized MCP server (`remoting-mcp`) running on the target PC.
-- **Visuals**: Captures the primary monitor using `mss` and publishes it to the LiveKit room as a high-performance video track.
-- **Input Injection**: Implements OS-level mouse and keyboard injection using the Windows `SendInput` API (via `pynput`).
-- **Security**: Granular "Grant Access" workflow with explicit consent required for input substrate attachment.
+- **Screen Capture**: `mss` library grabs the primary monitor at 15 FPS. Frames are converted from BGRA to I420 (YUV420P) for LiveKit compatibility.
+- **Input Injection**: OS-level mouse/keyboard via `pynput` (Windows `SendInput` API).
+- **Publishing**: `join_meeting()` creates a LiveKit `VideoSource`, publishes a `VideoTrack`, then loops capturing/publishing frames.
+- **State**: Managed via `RemotingState` singleton (room reference, task handle, publishing flag).
 
-## 4. Dynamic MCP Discovery & Intelligence
+## 4. Dynamic MCP Discovery
 
-AG-Visio implements a decentralized **Model Context Protocol (MCP)** architecture.
-- **Dynamic Discovery**: The agent performs a non-blocking scan of the 10700-10800 port range on startup to discover local SSE endpoints.
-- **Combined Context**: Uses a `CombinedMCPFunctionContext` to unify local monitoring, remote control, and external tools (e.g., LiveKit Docs MCP).
-- **Meeting Intelligence**: The `conferencing-mcp` server provides automated summarization and action item extraction, persisted to a **LanceDB** vector store for long-term recall.
-- **Metrics**: Real-time tracking of GPU VRAM (for Ollama health), CPU load, and disk occupancy.
+On startup, the agent performs a non-blocking scan of ports 10700–10800:
 
-## 6. Multimodal Address Book
+```python
+async def discover_local_mcp_endpoints(start=10700, end=10800):
+    # Parallel HTTP GET to {port}/mcp
+    # Returns list of reachable SSE endpoint URLs
+```
 
-The VisioAgent supports a federated address book system that aggregates contacts across multiple providers.
-- **Providers**: Microsoft Graph (Office 365), native Windows Contact store, and Gmail (Google People API).
-- **Architecture**: A modular `AddressBookOrchestrator` manages provider discovery and result merging.
-- **Search**: Integrated with the memory substrate for semantic contact retrieval using natural language.
+Each discovered endpoint is connected via the MCP client SDK (`sse_client` + `ClientSession`), and all tools are registered for dynamic delegation.
 
-## 7. Quality Engineering & Testing
+## 5. Memory Substrate (LanceDB)
 
-AG-Visio adheres to high industrial standards for codebase health.
-- **Linting**: Standardized on **Ruff** for Python analysis, ensuring zero architectural violations and consistent formatting.
-- **Testing**: Comprehensive **Pytest** scaffold covering all core "brain" logic (Memory, Contacts, Agent tools).
-- **Verification**: automated test cycles ensure 100% reliability of critical business logic before deployment.
+Four tables in the embedded vector database:
+
+| Table | Embedding Dim | Content | Query Method |
+|-------|---------------|---------|-------------|
+| `transcripts` | 384 | Conversation history | `query_history()` |
+| `codebase` | 384 | Source code chunks (1000-char) | `query_codebase()` |
+| `mission_logs` | 384 | System events | Direct LanceDB query |
+| `meeting_insights` | 384 | Summaries + action items | Direct LanceDB query |
+
+Embeddings are generated by FastEmbed (BAAI/bge-small-en-v1.5), working entirely offline.
+
+## 6. Inter-Agent Communication
+
+- **State Bus**: Redis pub/sub on channel `ag_visio_fleet_state`.
+- **Data Channel**: LiveKit data channel for real-time messages (remote credentials, intelligence requests).
+- **SSE**: MCP servers communicate via Server-Sent Events on dedicated ports.
+
+## 7. Conference Scheduling (SQLite)
+
+Database at `packages/conferencing_mcp/conference.db`:
+
+```sql
+conferences (id, title, description, room_name, scheduled_at,
+             duration_min, organizer, max_participants,
+             metadata, status, created_at, updated_at)
+
+conference_participants (id, conference_id, identity,
+                         display_name, role, invited_at)
+```
+
+## 8. Health Monitoring
+
+All services use the shared `myconf.health` module:
+
+- `check_tcp_port(host, port)` — TCP connectivity probe
+- `check_ollama()` — Ollama /api/tags endpoint
+- `health_response(service, checks)` — Standardized response format
+
+## 9. Quality Standards
+
+- **Ruff**: Line length 120, target Python 3.12
+- **MyPy**: Type checking on apps/agent and packages/*/mcp_server.py
+- **Bandit**: Security audit on `just check-sec`
+- **Safety**: Dependency audit on `just audit-deps`
+- **Pre-commit**: trailing-whitespace, end-of-file-fixer, check-yaml/json, ruff, mypy
+- **CI**: GitHub Actions with parallel web (Node 20) and Python (3.12) jobs
 
 ---
 

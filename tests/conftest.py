@@ -1,11 +1,18 @@
-import pytest
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "apps" / "agent"))
+
+import tempfile
 from unittest.mock import AsyncMock, MagicMock
+
+import pytest
 from fastmcp import FastMCP
 
 
 @pytest.fixture
 def mcp_mock():
-    """Mock FastMCP server instance for testing tool definitions."""
     mcp = FastMCP("test-server")
 
     @mcp.tool()
@@ -17,7 +24,6 @@ def mcp_mock():
 
 @pytest.fixture
 def livekit_session():
-    """Mock LiveKit Participant and Room session."""
     room = MagicMock()
     room.name = "test-room"
     room.local_participant = MagicMock()
@@ -28,7 +34,6 @@ def livekit_session():
 
 @pytest.fixture
 def mock_agent():
-    """Mock Visio agent instance for logic verification."""
     agent = MagicMock()
     agent.name = "Visio"
     agent.memory = MagicMock()
@@ -39,8 +44,19 @@ def mock_agent():
 
 @pytest.fixture
 def mock_mcp_client():
-    """Mock MCP Client for testing tool orchestration."""
     client = AsyncMock()
     client.list_tools = AsyncMock(return_value=[MagicMock(name="test_tool", description="A test tool")])
     client.call_tool = AsyncMock(return_value=MagicMock(content="Tool executed successfully"))
     return client
+
+
+@pytest.fixture
+def temp_lancedb():
+    import lancedb
+
+    tmpdir = tempfile.mkdtemp()
+    db = lancedb.connect(tmpdir)
+    yield db
+    import shutil
+
+    shutil.rmtree(tmpdir, ignore_errors=True)

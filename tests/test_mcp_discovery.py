@@ -1,8 +1,13 @@
-# Monorepo-wide MCP discovery tests
+"""Monorepo-wide MCP discovery tests."""
+
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "apps" / "agent"))
 
 
 async def test_remoting_mcp_discovery():
-    """Verify that the remoting-mcp server has all required tools."""
     from packages.remoting_mcp.mcp_server import mcp
 
     tools = await mcp.list_tools()
@@ -14,7 +19,6 @@ async def test_remoting_mcp_discovery():
 
 
 async def test_conferencing_mcp_discovery():
-    """Verify that the conferencing-mcp server has all required tools."""
     from packages.conferencing_mcp.mcp_server import mcp
 
     tools = await mcp.list_tools()

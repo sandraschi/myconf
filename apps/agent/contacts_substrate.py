@@ -1,11 +1,14 @@
+"""
+apps/agent/contacts_substrate.py — Multi-provider Contact Manager
+Tries real Windows contacts (COM), then falls back to cached/observed contacts.
+"""
+
 import asyncio
 import json
 import logging
 import os
 from dataclasses import asdict, dataclass
 
-# Configure logging
-logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("contacts_substrate")
 
 
@@ -25,71 +28,78 @@ class ContactProvider:
         raise NotImplementedError
 
 
-class MockOfficeProvider(ContactProvider):
-    """MOCK: Simulates Microsoft Graph API contact retrieval."""
+class WindowsContactProvider(ContactProvider):
+    """Retrieves contacts from Windows Address Book via COM."""
 
     async def get_contacts(self) -> list[Contact]:
-        # [MOCK] Simulating API latency
-        await asyncio.sleep(0.5)
-        return [
-            Contact(
-                id="off_1",
-                name="Steve Schipal",
-                email="steve@bank-it.at",
-                company="Bank IT",
-                source="office",
-            ),
-            Contact(
-                id="off_2", name="Marion Hollabrunn", email="marion@family.at", source="office"
-            ),
-            Contact(id="off_3", name="Reinhard Hollabrunn", source="office"),
-        ]
+        try:
+            import win32com.client  # pywin32
+
+            outlook = win32com.client.Dispatch("Outlook.Application")
+            namespace = outlook.GetNamespace("MAPI")
+            contacts_folder = namespace.GetDefaultFolder(10)  # olFolderContacts
+            items = contacts_folder.Items
+            contacts = []
+            for item in items:
+                try:
+                    contacts.append(
+                        Contact(
+                            id=f"outlook_{item.EntryID}",
+                            name=f"{item.FirstName or ''} {item.LastName or ''}".strip(),
+                            email=getattr(item, "Email1Address", None) or None,
+                            phone=getattr(item, "BusinessTelephoneNumber", None)
+                            or getattr(item, "MobileTelephoneNumber", None)
+                            or None,
+                            company=getattr(item, "CompanyName", None) or None,
+                            source="windows",
+                        )
+                    )
+                except Exception:
+                    logger.debug("Failed to parse Windows contact item", exc_info=True)
+                    continue
+            if contacts:
+                logger.info(f"Found {len(contacts)} contacts from Windows Address Book")
+                return contacts
+        except Exception as e:
+            logger.debug(f"Windows Address Book unavailable: {e}")
+        return []
 
 
-class WindowsLocalProvider(ContactProvider):
-    """Simulates or retrieves local Windows contacts."""
+class LocalSystemProvider(ContactProvider):
+    """Extracts known users from the local Windows system."""
 
     async def get_contacts(self) -> list[Contact]:
-        # In a real implementation, this would use pywin32 or pywinrt
-        # For now, providing high-fidelity mock data corresponding to the user's circle
-        return [
-            Contact(
-                id="win_1", name="Benny (GSD)", source="windows", avatar_url="/avatars/benny.jpg"
-            ),
-            Contact(
-                id="win_2", name="TMW TechLAB Service", email="service@tmw.at", source="windows"
-            ),
-        ]
+        try:
+            import win32net
 
-
-class MockGoogleContactProvider(ContactProvider):
-    """MOCK: Simulates Google People API contact retrieval."""
-
-    async def get_contacts(self) -> list[Contact]:
-        await asyncio.sleep(0.3)
-        return [
-            Contact(
-                id="goog_1",
-                name="Sandra Schipal (Personal)",
-                email="sandra.schipal@gmail.com",
-                source="google",
-            ),
-            Contact(
-                id="goog_2",
-                name="Japan Residency Support",
-                email="tokyo.desk@google.com",
-                source="google",
-                company="Google Japan",
-            ),
-        ]
+            users = []
+            resume = 0
+            while True:
+                data, _, _, resume = win32net.NetUserEnum(None, 0, 0, resume, 1024)
+                for u in data:
+                    name = u["name"]
+                    if name not in ("Administrator", "Guest", "DefaultAccount"):
+                        users.append(
+                            Contact(
+                                id=f"local_{name}",
+                                name=name,
+                                source="local_system",
+                            )
+                        )
+                if resume == 0:
+                    break
+            logger.info(f"Found {len(users)} local system users")
+            return users
+        except Exception as e:
+            logger.debug(f"Local system user enum unavailable: {e}")
+        return []
 
 
 class ContactManager:
     def __init__(self, cache_path: str = "contacts_cache.json"):
         self.providers: list[ContactProvider] = [
-            MockOfficeProvider(),
-            WindowsLocalProvider(),
-            MockGoogleContactProvider(),
+            WindowsContactProvider(),
+            LocalSystemProvider(),
         ]
         self.cache_path = cache_path
         self.contacts: list[Contact] = []
@@ -137,10 +147,7 @@ class ContactManager:
 
 
 if __name__ == "__main__":
-    # Test execution
+    logging.basicConfig(level=logging.INFO)
     manager = ContactManager()
     asyncio.run(manager.sync_all())
     print(f"Found {len(manager.contacts)} contacts.")
-    results = manager.search("Steve")
-    for r in results:
-        print(f"Match: {r.name} ({r.source})")

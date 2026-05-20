@@ -22,6 +22,10 @@ import RustDeskPanel from "@/components/RustDeskPanel";
 import RemoteAssistanceOverlay from "@/components/RemoteAssistanceOverlay";
 import { AgentFleetPanel } from "@/components/AgentFleetPanel";
 import ContactPanel from "@/components/ContactPanel";
+import FileSharingPanel from "@/components/FileSharingPanel";
+import ScreenShareControl from "@/components/ScreenShareControl";
+import RecordingButton from "@/components/RecordingButton";
+import BackgroundBlurToggle from "@/components/BackgroundBlurToggle";
 import { telemetry } from "@/lib/telemetry";
 import { useSettings } from "@/lib/settings";
 import { useDiscovery } from "@/lib/discovery";
@@ -50,7 +54,7 @@ export default function ModConsDashboard() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isLogViewerOpen, setIsLogViewerOpen] = useState(false);
-  const [rightPanelTab, setRightPanelTab] = useState<"transcript" | "chat" | "remote" | "fleet" | "contacts" | "intelligence">("intelligence");
+  const [rightPanelTab, setRightPanelTab] = useState<"transcript" | "chat" | "remote" | "fleet" | "files" | "contacts" | "intelligence">("intelligence");
   const [focusedTrackSid, setFocusedTrackSid] = useState<string | null>(null);
   const hasAppliedRoomParam = useRef(false);
   const deviceValidation = usePreJoinValidation(settings);
@@ -211,20 +215,25 @@ export default function ModConsDashboard() {
                   />
                 </div>
                 <div className="mt-4 p-2 glass-panel rounded-2xl">
-                  <ControlBar
-                    controls={{
-                      microphone: true,
-                      camera: true,
-                      screenShare: true,
-                      chat: false,
-                      leave: true,
-                    }}
-                    variation="verbose"
-                  />
+                  <div className="flex items-center justify-center gap-2 sm:gap-3 flex-wrap">
+                    <ControlBar
+                      controls={{
+                        microphone: true,
+                        camera: true,
+                        screenShare: true,
+                        chat: false,
+                        leave: true,
+                      }}
+                      variation="verbose"
+                    />
+                    <ScreenShareControl />
+                    <RecordingButton />
+                    <BackgroundBlurToggle />
+                  </div>
                 </div>
               </div>
-              {/* Right sidebar: Transcript + Chat */}
-              <aside className="w-80 border-l border-white/5 glass-panel flex flex-col shrink-0 m-2 rounded-2xl overflow-hidden">
+              {/* Right sidebar: collapsible on mobile */}
+              <aside className="w-80 max-lg:w-full max-lg:max-h-80 border-l border-white/5 glass-panel flex flex-col shrink-0 m-2 rounded-2xl overflow-hidden">
                 <div className="flex border-b border-gray-800">
                   <button
                     type="button"
@@ -255,6 +264,26 @@ export default function ModConsDashboard() {
                       }`}
                   >
                     Fleet
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setRightPanelTab("files")}
+                    className={`flex-1 px-4 py-3 text-xs font-semibold uppercase tracking-wider transition-colors ${rightPanelTab === "files"
+                      ? "bg-neutral-800 text-white border-b-2 border-blue-500"
+                      : "text-gray-500 hover:text-gray-300"
+                      }`}
+                  >
+                    Files
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setRightPanelTab("chat")}
+                    className={`flex-1 px-4 py-3 text-xs font-semibold uppercase tracking-wider transition-colors ${rightPanelTab === "chat"
+                      ? "bg-neutral-800 text-white border-b-2 border-blue-500"
+                      : "text-gray-500 hover:text-gray-300"
+                      }`}
+                  >
+                    Chat
                   </button>
                   <button
                     type="button"
@@ -290,6 +319,8 @@ export default function ModConsDashboard() {
                     <div className="h-full p-4 overflow-y-auto">
                       <AgentFleetPanel />
                     </div>
+                  ) : rightPanelTab === "files" ? (
+                    <FileSharingPanel />
                   ) : rightPanelTab === "intelligence" ? (
                     <MeetingIntelligencePanel room={useRoomContext()} />
                   ) : (
@@ -453,7 +484,7 @@ export default function ModConsDashboard() {
                   </p>
                 </div>
               </div>
-              <aside className="w-80 border-l border-gray-800 bg-neutral-900/50 flex flex-col items-center justify-center">
+              <aside className="w-80 max-lg:w-full max-lg:hidden border-l border-gray-800 bg-neutral-900/50 flex flex-col items-center justify-center">
                 <p className="text-gray-500 text-sm text-center px-4">
                   Join room to see<br />transcript and chat
                 </p>
@@ -492,14 +523,20 @@ function ModConsGrid({
   );
 
   // Automatic Focus Selection: If no manual focus, pick the first screen share
-  const effectiveFocusSid = focusedTrackSid ?? screenShareTracks[0]?.publication?.trackSid;
-  const focusedTrack = tracks.find(t => t.publication?.trackSid === effectiveFocusSid);
+  // When user explicitly releases focus (focusedTrackSid set to null), don't re-auto-focus
+  const hasScreenShares = screenShareTracks.length > 0;
+  const effectiveFocusSid = focusedTrackSid !== null
+    ? (focusedTrackSid ?? (hasScreenShares ? screenShareTracks[0]?.publication?.trackSid : null))
+    : null;
+  const focusedTrack = effectiveFocusSid
+    ? tracks.find(t => t.publication?.trackSid === effectiveFocusSid)
+    : null;
   const otherTracks = tracks.filter(t => t.publication?.trackSid !== effectiveFocusSid);
 
   if (effectiveFocusSid && focusedTrack) {
     const focusedSid = focusedTrack.publication?.trackSid;
     return (
-      <div className="flex flex-col md:flex-row gap-4 h-full overflow-hidden">
+      <div className="flex flex-col lg:flex-row gap-4 h-full overflow-hidden">
         {/* Main Focus Area (70%) */}
         <div className="flex-[7] min-h-0 bg-neutral-900 rounded-2xl overflow-hidden border border-blue-500/30 relative group">
           <ParticipantTile trackRef={focusedTrack} />

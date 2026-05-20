@@ -9,7 +9,9 @@ $WindowStyle = if ($Headless) { 'Hidden' } else { 'Normal' }
 # ------------------------------
 
 $env:FASTMCP_LOG_LEVEL = 'WARNING'
-# myconf Start - Standards-Compliant SOTA
-Write-Host 'Starting myconf...' -ForegroundColor Cyan
 
-uv run -m myconf
+$service = if ($args[0]) { $args[0] } else { 'conferencing' }
+
+Write-Host "Starting myconf [$service]..." -ForegroundColor Cyan
+
+uv run -m myconf $service

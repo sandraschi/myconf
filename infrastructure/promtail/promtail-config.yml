@@ -1,0 +1,36 @@
+server:
+  http_listen_port: 9080
+  grpc_listen_port: 0
+
+positions:
+  filename: /tmp/positions.yaml
+
+clients:
+  - url: http://loki:3100/loki/api/v1/push
+
+scrape_configs:
+  - job_name: system
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: varlogs
+          __path__: /var/log/host/**/*.log
+
+  - job_name: ag-visio-mcp
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: ag-visio
+          service: conferencing-mcp
+          __path__: /var/log/mcp_server.log
+
+  - job_name: ag-visio-agent
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: ag-visio
+          service: agent
+          __path__: /var/log/agent_industrial.log

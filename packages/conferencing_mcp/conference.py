@@ -17,7 +17,7 @@ import logging
 import os
 import sqlite3
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -86,25 +86,21 @@ def _lk_room_service():
     try:
         from livekit import api as lk_api  # livekit-api package
     except ImportError as exc:
-        raise RuntimeError(
-            "livekit-api not installed. Add it to requirements.txt."
-        ) from exc
+        raise RuntimeError("livekit-api not installed. Add it to requirements.txt.") from exc
 
     url = os.environ.get("LIVEKIT_URL", "")
     key = os.environ.get("LIVEKIT_API_KEY", "")
     secret = os.environ.get("LIVEKIT_API_SECRET", "")
 
     if not all([url, key, secret]):
-        raise RuntimeError(
-            "LIVEKIT_URL, LIVEKIT_API_KEY, LIVEKIT_API_SECRET must all be set."
-        )
+        raise RuntimeError("LIVEKIT_URL, LIVEKIT_API_KEY, LIVEKIT_API_SECRET must all be set.")
 
     livekit_api = lk_api.LiveKitAPI(url=url, api_key=key, api_secret=secret)
     return livekit_api
 
 
 def _now_iso() -> str:
-    return datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+    return datetime.now(UTC).isoformat().replace("+00:00", "Z")
 
 
 # ---------------------------------------------------------------------------
@@ -147,8 +143,7 @@ def schedule_conference(
                max_participants, metadata, status, created_at, updated_at)
             VALUES (?,?,?,?,?,?,?,?, 'SCHEDULED',?,?)
             """,
-            (cid, title, description, scheduled_at, duration_min, organizer,
-             max_participants, meta_str, now, now),
+            (cid, title, description, scheduled_at, duration_min, organizer, max_participants, meta_str, now, now),
         )
     return get_conference(cid)
 
@@ -156,9 +151,7 @@ def schedule_conference(
 def get_conference(conference_id: str) -> dict[str, Any]:
     """Fetch a single conference by ID. Raises KeyError if not found."""
     with _get_db() as conn:
-        row = conn.execute(
-            "SELECT * FROM conferences WHERE id=?", (conference_id,)
-        ).fetchone()
+        row = conn.execute("SELECT * FROM conferences WHERE id=?", (conference_id,)).fetchone()
     if row is None:
         raise KeyError(f"Conference not found: {conference_id}")
     return dict(row)
@@ -194,7 +187,7 @@ def list_conferences(
     params.append(limit)
     with _get_db() as conn:
         rows = conn.execute(
-            f"SELECT * FROM conferences {where} ORDER BY scheduled_at ASC LIMIT ?",
+            f"SELECT * FROM conferences {where} ORDER BY scheduled_at ASC LIMIT ?",  # noqa: S608
             params,
         ).fetchall()
     return [dict(r) for r in rows]
@@ -208,19 +201,23 @@ def update_conference(conference_id: str, **fields: Any) -> dict[str, Any]:
     max_participants, metadata, status.
     """
     allowed = {
-        "title", "description", "scheduled_at", "duration_min",
-        "max_participants", "metadata", "status", "room_name",
+        "title",
+        "description",
+        "scheduled_at",
+        "duration_min",
+        "max_participants",
+        "metadata",
+        "status",
+        "room_name",
     }
     updates = {k: v for k, v in fields.items() if k in allowed}
     if not updates:
         raise ValueError("No valid fields to update.")
     updates["updated_at"] = _now_iso()
     set_clause = ", ".join(f"{k}=?" for k in updates)
-    values = list(updates.values()) + [conference_id]
+    values = [*list(updates.values()), conference_id]
     with _get_db() as conn:
-        conn.execute(
-            f"UPDATE conferences SET {set_clause} WHERE id=?", values
-        )
+        conn.execute(f"UPDATE conferences SET {set_clause} WHERE id=?", values)  # noqa: S608
     return get_conference(conference_id)
 
 
@@ -359,9 +356,7 @@ async def lk_update_room_metadata(name: str, metadata: str) -> dict[str, Any]:
     try:
         from livekit.api import UpdateRoomMetadataRequest
 
-        room = await api.room.update_room_metadata(
-            UpdateRoomMetadataRequest(room=name, metadata=metadata)
-        )
+        room = await api.room.update_room_metadata(UpdateRoomMetadataRequest(room=name, metadata=metadata))
         return {"name": room.name, "metadata": room.metadata}
     finally:
         await api.aclose()
@@ -401,9 +396,7 @@ async def lk_kick_participant(room_name: str, identity: str) -> dict[str, str]:
     try:
         from livekit.api import RemoveParticipantRequest
 
-        await api.room.remove_participant(
-            RemoveParticipantRequest(room=room_name, identity=identity)
-        )
+        await api.room.remove_participant(RemoveParticipantRequest(room=room_name, identity=identity))
         return {"status": "kicked", "identity": identity, "room": room_name}
     finally:
         await api.aclose()
@@ -429,9 +422,7 @@ async def lk_mute_participant(
         from livekit.api import MuteRoomTrackRequest
 
         resp = await api.room.mute_published_track(
-            MuteRoomTrackRequest(
-                room=room_name, identity=identity, track_sid=track_sid, muted=muted
-            )
+            MuteRoomTrackRequest(room=room_name, identity=identity, track_sid=track_sid, muted=muted)
         )
         return {
             "track_sid": resp.track.sid,

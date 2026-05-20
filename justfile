@@ -2,33 +2,9 @@ set windows-shell := ["pwsh.exe", "-NoLogo", "-Command"]
 
 # ── Dashboard ─────────────────────────────────────────────────────────────────
 
-# Display the Teams++ Industrial Dashboard
+# Open the interactive recipe dashboard in the browser
 default:
-    @$lines = Get-Content '{{justfile()}}'; \
-    Write-Host ' [Teams++] MyConf Operations Dashboard v2.0.0' -ForegroundColor White -BackgroundColor Cyan; \
-    Write-Host '' ; \
-    $currentCategory = ''; \
-    foreach ($line in $lines) { \
-        if ($line -match '^# ── ([^─]+) ─') { \
-            $currentCategory = $matches[1].Trim(); \
-            Write-Host "`n  $currentCategory" -ForegroundColor Cyan; \
-            Write-Host ('  ' + ('─' * 45)) -ForegroundColor Gray; \
-        } elseif ($line -match '^# ([^─].+)') { \
-            $desc = $matches[1].Trim(); \
-            $idx = [array]::IndexOf($lines, $line); \
-            if ($idx -lt $lines.Count - 1) { \
-                $nextLine = $lines[$idx + 1]; \
-                if ($nextLine -match '^([a-z0-9-]+):') { \
-                    $recipe = $matches[1]; \
-                    $pad = ' ' * [math]::Max(2, (18 - $recipe.Length)); \
-                    Write-Host "    $recipe" -ForegroundColor White -NoNewline; \
-                    Write-Host "$pad$desc" -ForegroundColor Gray; \
-                } \
-            } \
-        } \
-    } \
-    Write-Host "`n  [Substrate State: Teams++ / UPGRADED]" -ForegroundColor DarkGray; \
-    Write-Host ''
+    @pwsh.exe -NoProfile -ExecutionPolicy Bypass -File ../mcp-central-docs/scripts/just-dashboard.ps1 -Path .
 
 # ── Teams++ Orchestration ───────────────────────────────────────────────────
 
@@ -48,10 +24,15 @@ agent:
     .\venv\Scripts\activate; \
     python agent.py dev
 
-# Launch the Next.js dashboard
+# Launch the Next.js dashboard (production)
 web:
     Set-Location '{{justfile_directory()}}'
-    npm run dev --workspace=web
+    npm run start --workspace=web
+
+# Build the Next.js dashboard for production
+build-web:
+    Set-Location '{{justfile_directory()}}'
+    npm run build --workspace=web
 
 # ── Quality ───────────────────────────────────────────────────────────────────
 

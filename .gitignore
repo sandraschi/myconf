@@ -57,3 +57,11 @@ lint-results.json
 lint_output.txt
 # Rust / Zed IDE — rust-analyzer may create target/ at repo root
 target/
+
+# Runtime data (file uploads, caches, databases)
+data/
+*.db
+lancedb_data/
+contacts_cache.json
+
+_dashboard/

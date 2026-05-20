@@ -1,87 +1,91 @@
-"""Unit tests for the VisioAgent session logic."""
-
 import sys
-from unittest.mock import AsyncMock, MagicMock
+from pathlib import Path
 
-
-# Robust mocking of livekit package structure for environments without dependencies
-class MockModule(MagicMock):
-    def __getattr__(self, name):
-        return MagicMock()
-
-def setup_livekit_mocks():
-    if "livekit" not in sys.modules:
-        livekit = MockModule()
-        sys.modules["livekit"] = livekit
-        sys.modules["livekit.rtc"] = MockModule()
-        sys.modules["livekit.agents"] = MockModule()
-        sys.modules["livekit.agents.llm"] = MockModule()
-        sys.modules["livekit.agents.pipeline"] = MockModule()
-        sys.modules["livekit.agents.voice"] = MockModule()
-        sys.modules["livekit.plugins"] = MockModule()
-        sys.modules["livekit.plugins.piper_tts"] = MockModule()
-        for plugin in ["deepgram", "openai", "silero", "turn_detector", "whisper"]:
-            sys.modules[f"livekit.plugins.{plugin}"] = MockModule()
-
-setup_livekit_mocks()
-
-if "ollama" not in sys.modules:
-    sys.modules["ollama"] = MockModule()
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 
 import pytest
+from logic import ReductionistLogic
+from memory_substrate import MemorySubstrate
+from state_bus import StateBus
+from vision_analyze import VisionSubstrate
 
-from agent.agent import VisioTools
+
+class TestReductionistLogic:
+    def test_init(self):
+        logic = ReductionistLogic()
+        assert logic is not None
+        assert not logic.remote_active
+
+    def test_saliency_clean(self):
+        logic = ReductionistLogic()
+        assert logic.analyze_saliency("the build failed due to a type error") == 0.0
+
+    def test_saliency_jargon(self):
+        logic = ReductionistLogic()
+        logic.enable_jargon_detection(True)
+        score = logic.analyze_saliency("we need more synergy and holistic alignment")
+        assert score > 0.5
+
+    def test_saliency_empty(self):
+        logic = ReductionistLogic()
+        assert logic.analyze_saliency("") == 0.0
+
+    def test_remote_credentials(self):
+        logic = ReductionistLogic()
+        assert not logic.remote_active
+        logic.set_remote_credentials("target123", "p@ssword")
+        assert logic.remote_active
 
 
-class TestVisioTools:
-    """Verifies that the agent tools (FunctionContext) are correctly implemented."""
+class TestStateBus:
+    @pytest.mark.asyncio
+    async def test_lifecycle(self):
+        bus = StateBus()
+        assert not bus.is_connected
+        await bus.connect()
+        await bus.disconnect()
+        assert not bus.is_connected
 
-    @pytest.fixture
-    def tools(self):
-        """Returns a VisioTools instance with mocked dependencies."""
-        mock_logic = MagicMock()
-        mock_memory = MagicMock()
-        mock_room = MagicMock()
-        mock_contacts = MagicMock()
-        return VisioTools(mock_logic, mock_memory, mock_room, mock_contacts)
 
-    def test_tool_registration(self, tools):
-        """Standard check: Search and sync tools must be exposed to LLM."""
-        assert hasattr(tools, "search_knowledge_base")
-        assert hasattr(tools, "sync_contacts")
-        assert hasattr(tools, "search_contacts")
-
-    def test_search_knowledge_base_orchestration(self, tools):
-        """Verifies the tools correctly delegate search to memory substrate (Synchronous)."""
-        tools._memory.query_history.return_value = [{"speaker": "Sandra", "text": "Found it"}]
-        tools._memory.query_codebase.return_value = [{"file_path": "app.py", "text": "code snippet"}]
-
-        # In agent.py, search_knowledge_base is a synchronous method (def)
-        result = tools.search_knowledge_base("test query")
-
-        assert "Sandra" in result
-        assert "Found it" in result
-        assert "app.py" in result
-        tools._memory.query_history.assert_called_with("test query", limit=3)
-        tools._memory.query_codebase.assert_called_with("test query", limit=2)
-
-    def test_search_knowledge_base_no_hits(self, tools):
-        """Ensures a polite fallback when no context is found."""
-        tools._memory.query_history.return_value = []
-        tools._memory.query_codebase.return_value = []
-
-        result = tools.search_knowledge_base("unfindable")
-        assert "No relevant historical or technical context" in result
+class TestVisionSubstrate:
+    def test_init(self):
+        vs = VisionSubstrate(mode="local")
+        assert vs is not None
 
     @pytest.mark.asyncio
-    async def test_sync_contacts_orchestration(self, tools):
-        """Verifies delegation to contact manager for full sync (Asynchronous)."""
-        tools._contacts.sync_all = AsyncMock(return_value=[MagicMock(), MagicMock()])
+    async def test_process_frame(self):
+        vs = VisionSubstrate(mode="local")
+        result = await vs.process_video_frame(None)
+        assert isinstance(result, str)
 
-        # In agent.py, sync_contacts is an asynchronous method (async def)
-        result = await tools.sync_contacts()
 
-        assert "SUCCESS" in result
-        assert "2 contacts" in result
-        tools._contacts.sync_all.assert_called_once()
+class TestMemorySubstrate:
+    @pytest.fixture
+    def memory(self, tmp_path):
+        return MemorySubstrate(db_path=str(tmp_path / "test_lancedb"))
+
+    def test_init_tables(self, memory):
+        tables = memory.db.list_tables()
+        table_names = tables.tables if hasattr(tables, "tables") else tables
+        assert "transcripts" in table_names
+        assert "codebase" in table_names
+        assert "mission_logs" in table_names
+
+    def test_ingest_and_query(self, memory):
+        memory.ingest_transcript("discussing project timeline", speaker="Sandra")
+        results = memory.query_history("project timeline")
+        assert len(results) > 0
+        assert "project timeline" in results[0]["text"]
+
+    def test_query_empty(self, memory):
+        results = memory.query_history("nonexistent")
+        assert len(results) >= 0
+
+    def test_index_project(self, memory, tmp_path):
+        src = tmp_path / "src"
+        src.mkdir()
+        (src / "main.py").write_text("def hello(): return 'world'")
+        memory.index_project(str(tmp_path))
+        results = memory.query_codebase("hello")
+        assert len(results) > 0

@@ -19,8 +19,75 @@ test.describe("AG-Visio smoke", () => {
     await expect(page.getByRole("link", { name: /back to dashboard/i })).toBeVisible();
   });
 
-  test("settings page loads", async ({ page }) => {
+  test("settings page loads all sections", async ({ page }) => {
     await page.goto("/settings");
     await expect(page.getByRole("heading", { name: /settings/i })).toBeVisible();
+    await expect(page.getByText(/livekit configuration/i)).toBeVisible();
+    await expect(page.getByText(/ollama/i)).toBeVisible();
+    await expect(page.getByText(/audio & video devices/i)).toBeVisible();
+    await expect(page.getByText(/appearance/i)).toBeVisible();
+    await expect(page.getByText(/privacy/i)).toBeVisible();
+  });
+
+  test("theme selector works", async ({ page }) => {
+    await page.goto("/settings");
+    const dark = page.getByRole("button", { name: /dark/i });
+    const light = page.getByRole("button", { name: /^light$/i });
+    const system = page.getByRole("button", { name: /system/i });
+
+    await expect(dark).toBeVisible();
+    await expect(light).toBeVisible();
+    await expect(system).toBeVisible();
+
+    // Click light theme
+    await light.click();
+    await expect(light).toHaveClass(/bg-blue-600/);
+  });
+
+  test("health page loads and shows status sections", async ({ page }) => {
+    await page.goto("/health");
+    await expect(page.getByRole("heading", { name: /health dashboard/i })).toBeVisible();
+    await expect(page.getByText(/overall status/i)).toBeVisible();
+    await expect(page.getByText(/livekit server/i)).toBeVisible();
+  });
+
+  test("sidebar navigation is present", async ({ page }) => {
+    await page.goto("/");
+    await expect(page.getByRole("link", { name: /dashboard/i })).toBeVisible();
+    await expect(page.getByRole("link", { name: /meetings/i })).toBeVisible();
+    await expect(page.getByRole("link", { name: /health/i })).toBeVisible();
+    await expect(page.getByRole("link", { name: /settings/i })).toBeVisible();
+  });
+
+  test("meetings page loads", async ({ page }) => {
+    await page.goto("/meetings");
+    await expect(page.getByRole("heading", { name: /meetings/i })).toBeVisible();
+    await expect(page.getByRole("button", { name: /schedule/i })).toBeVisible();
+  });
+
+  test("meetings page can open create form", async ({ page }) => {
+    await page.goto("/meetings");
+    await page.getByRole("button", { name: /schedule/i }).click();
+    await expect(page.getByText(/new meeting/i)).toBeVisible();
+    await expect(page.getByPlaceholder(/sprint review/i)).toBeVisible();
+  });
+
+  test("keyboard shortcut ? opens help", async ({ page }) => {
+    await page.goto("/");
+    await page.keyboard.press("?");
+    // Help modal should appear (may be a dialog or section)
+    await expect(page.getByText(/getting started|help|shortcuts/i).first()).toBeVisible({ timeout: 3000 });
+  });
+
+  test("device test page loads camera/mic sections", async ({ page }) => {
+    await page.goto("/test");
+    await expect(page.getByText(/camera/i)).toBeVisible();
+    await expect(page.getByText(/microphone/i)).toBeVisible();
+    await expect(page.getByText(/speaker/i)).toBeVisible();
+  });
+
+  test("reset to defaults button exists in settings", async ({ page }) => {
+    await page.goto("/settings");
+    await expect(page.getByRole("button", { name: /reset/i })).toBeVisible();
   });
 });

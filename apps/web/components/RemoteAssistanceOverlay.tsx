@@ -43,7 +43,7 @@ export default function RemoteAssistanceOverlay() {
     });
 
     try {
-      await room.local_participant.publish_data(new TextEncoder().encode(payload));
+      await room.localParticipant.publishData(new TextEncoder().encode(payload));
       setRequest(null);
       setId("");
       setPassword("");

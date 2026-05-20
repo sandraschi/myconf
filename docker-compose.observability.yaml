@@ -1,0 +1,57 @@
+# Observability stack: Prometheus + Loki + Grafana + Promtail
+# Usage: docker compose -f docker-compose.yaml -f docker-compose.observability.yaml up -d
+# Grafana: http://localhost:3000 (admin / admin)
+
+services:
+  prometheus:
+    image: prom/prometheus:latest
+    ports:
+      - "19090:9090"
+    volumes:
+      - ./infrastructure/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+    restart: always
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  loki:
+    image: grafana/loki:latest
+    ports:
+      - "13100:3100"
+    volumes:
+      - ./infrastructure/loki/loki-config.yml:/etc/loki/local-config.yaml
+      - loki_data:/loki
+    restart: always
+    command: -config.file=/etc/loki/local-config.yaml
+
+  grafana:
+    image: grafana/grafana:latest
+    ports:
+      - "13000:3000"
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: admin
+      GF_INSTALL_PLUGINS: grafana-piechart-panel
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./infrastructure/grafana/dashboards:/etc/grafana/provisioning/dashboards
+      - ./infrastructure/grafana/datasources.yml:/etc/grafana/provisioning/datasources/datasources.yml
+    depends_on:
+      - prometheus
+      - loki
+    restart: always
+
+  promtail:
+    image: grafana/promtail:latest
+    volumes:
+      - ./infrastructure/promtail/promtail-config.yml:/etc/promtail/config.yml
+      - ./mcp_server.log:/var/log/mcp_server.log
+      - ./apps/agent/agent_industrial.log:/var/log/agent_industrial.log
+      - /var/log:/var/log/host:ro
+    restart: always
+    command: -config.file=/etc/promtail/config.yml
+
+volumes:
+  prometheus_data:
+  loki_data:
+  grafana_data:

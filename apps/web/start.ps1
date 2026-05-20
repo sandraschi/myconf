@@ -1,4 +1,4 @@
-﻿Param([switch]$Headless)
+﻿Param([switch]$Headless, [switch]$Rebuild)
 
 # --- SOTA Headless Standard ---
 if ($Headless -and ($Host.UI.RawUI.WindowTitle -notmatch 'Hidden')) {
@@ -8,15 +8,23 @@ if ($Headless -and ($Host.UI.RawUI.WindowTitle -notmatch 'Hidden')) {
 $WindowStyle = if ($Headless) { 'Hidden' } else { 'Normal' }
 # ------------------------------
 
-# Sandra Schipal | SOTA 2026 | Webapp Startup Protocol
+# Sandra Schipal | SOTA 2026 | Webapp Startup Protocol (Production)
 # Port: 10886 (myconf frontend)
 
 $WebPort = 10886
-Write-Host "Sandra: Cleansing port $WebPort of zombie processes..." -ForegroundColor Cyan
-
-# Use npx kill-port for maximum reliability across environments
+Write-Host "Clearing port $WebPort..." -ForegroundColor Cyan
 npx --yes kill-port $WebPort 2>$null
 
-Write-Host "Sandra: Port $WebPort secured. Initializing Next.js development grid..." -ForegroundColor Green
-npm run dev
-
+# Build once, serve pre-compiled
+$buildId = ".next\BUILD_ID"
+if ($Rebuild -or -not (Test-Path $buildId)) {
+    Write-Host "Building frontend for production..." -ForegroundColor Cyan
+    npm run build
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host "Build failed! Falling back to dev mode." -ForegroundColor Red
+        npm run dev
+        exit
+    }
+}
+Write-Host "Starting frontend on port $WebPort..." -ForegroundColor Green
+npm run start

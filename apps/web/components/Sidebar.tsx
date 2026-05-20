@@ -12,6 +12,9 @@ import {
   Monitor,
   Activity,
   Calendar,
+  Video,
+  Library,
+  Paperclip,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -23,7 +26,9 @@ const SIDEBAR_COLLAPSED_KEY = "ag-visio-sidebar-collapsed";
 
 const navItems = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/schedule", label: "Schedule", icon: Calendar },
+  { href: "/meetings", label: "Meetings", icon: Calendar },
+  { href: "/recordings", label: "Recordings", icon: Library },
+  { href: "/files", label: "Files", icon: Paperclip },
   { href: "/health", label: "Health", icon: Activity },
   { href: "/settings", label: "Settings", icon: Settings },
 ];
@@ -49,6 +54,7 @@ export default function Sidebar({ onHelpClick }: SidebarProps) {
     <aside
       className={cn(
         "flex flex-col bg-neutral-900 border-r border-gray-800 transition-all duration-300 ease-in-out",
+        "max-lg:hidden", // hide on mobile, show on desktop
         isCollapsed ? "w-16" : "w-64"
       )}
     >
@@ -58,7 +64,7 @@ export default function Sidebar({ onHelpClick }: SidebarProps) {
         {!isCollapsed && (
           <div className="ml-3 overflow-hidden">
             <h1 className="text-sm font-bold text-white truncate">AG-VISIO</h1>
-            <span className="text-[10px] text-gray-500 font-mono">V0.1-SOTA</span>
+            <span className="text-[10px] text-gray-500 font-mono">V2.1.0</span>
           </div>
         )}
       </div>

@@ -2,6 +2,54 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.1.0] - 2026-05-01
+### Added
+- **Screen sharing from dashboard**: Custom `ScreenShareControl` component wrapping LiveKit's `useScreenShare` with error handling, loading state, and visual feedback. Mounted alongside the ControlBar.
+- **Scheduling UI**: Full meeting lifecycle at `/meetings` — create form (title, datetime, duration, room), upcoming/past list, one-click copy invite link. Connected to existing `/api/meetings` REST backend.
+- **Chat tab activation**: ChatPanel was imported and rendered but had no sidebar button — tab button added to the right sidebar tab row.
+- **Meeting recording button**: RecordingButton component toggles LiveKit Egress via `/api/egress` API with visual recording indicator.
+- **Background blur toggle**: BackgroundBlurToggle component using `@livekit/track-processors` for camera background blur.
+- **Expanded E2E tests**: Added tests for settings sections, theme selector, health page, sidebar nav, meetings page, keyboard shortcuts, device test page.
+- **Mobile responsive layout**: Sidebar hides on mobile (`max-lg:hidden`), right panel goes full-width on small screens, control bar wraps, pre-join aside hidden on mobile, meeting form grid stacks vertically.
+- **User-friendly documentation**: Rewrote README.md with architecture diagram, port map, capability table, and links to 6 sub-readmes: `docs/INSTALL.md`, `docs/ARCHITECTURE.md`, `docs/LIVEKIT.md`, `docs/FEATURES.md`, `docs/USAGE.md`.
+
+### Fixed
+- **Entrypoint fix**: Created `myconf/` package with `__main__.py`; `uv run -m myconf` now works (was broken).
+- **Dependency completeness**: Added `aiohttp`, `ollama`, `redis`, `livekit-api`, `livekit-agents`, `psutil`, `numpy` to pyproject.toml.
+- **Dynamic MCP tool registration**: `_register_mcp_tool()` was a no-op — replaced with real MCP session management and tool delegation in `CombinedMCPFunctionContext`.
+- **Screen capture wiring**: `publish_screen_loop` in remoting-mcp now converts BGRA→I420 and publishes real LiveKit video frames.
+- **StateBus cleanup**: Added `disconnect()` method with Redis connection teardown.
+- **All stubs replaced**: `contacts_substrate.py` now tries Windows COM/AD, falls back gracefully; `vision_analyze.py` uses UIAutomation for screen reading; `orchestrate_remote_support` probes registry for RustDesk; `list_active_conferences` uses real LiveKit API.
+- **Docker volumes**: Added `livekit_data`, `redis_data`, `lancedb_data` persistent volumes.
+- **Secrets hardening**: docker-compose.yaml now uses `${LIVEKIT_API_KEY:-devkey}` pattern instead of hardcoded secrets.
+- **Version consistency**: Unified to 2.0.0 across pyproject.toml, settings page, justfile.
+- **Light theme**: Wired ThemeProvider that respects `settings.theme` and applies light/dark/system mode.
+- **Health monitoring**: Added `myconf/health.py` shared module and health endpoints on all services.
+- **Legacy TS MCP removed**: `packages/conferencing_mcp/src/index.ts` (TypeScript SDK legacy) deleted.
+- **Agent Dockerfile**: Updated to Python 3.12, copies all substrate files, adds missing system deps.
+- **ModConsGrid focus release**: Releasing focus from a screen share no longer auto-snaps back to screen share - user can now freely navigate camera tracks.
+- **Sidebar nav**: Replaced dead `/schedule` link with working `/meetings` entry.
+- **Egress API route**: Created `/api/egress/start|stop` using `livekit-server-sdk` `RoomServiceClient`.
+- **Screen share via publishTrack**: ScreenShareControl now uses `localParticipant.publishTrack()` with `getDisplayMedia` stream.
+- **Background blur via track-processors**: Installed `@livekit/track-processors`, `BackgroundBlur` processor wired to camera track.
+- **Zero TypeScript errors**: Fixed all type errors across BackgroundBlurToggle, ScreenShareControl, RemoteAssistanceOverlay, meetings page, ScreenShareControl.
+- **MCP central docs update**: Updated fleet-registry.json (fastmcp → 3.2.0), project README and STATUS with new features and correct ports.
+- **TURN server config**: Added STUN servers (Google public) and TURN section (disabled by default) to `livekit.yaml` for NAT traversal.
+- **Guest join page**: Created `/join/[room]` — one-click join from a shared link, no dashboard needed. Minimal UI with name field, auto-fallback to Guest_ID.
+- **Visio personality fix**: Replaced reductionist/jargon-calling system prompt with a professional, helpful AI meeting assistant prompt. Jargon detection disabled by default (opt-in via `enable_jargon_detection()`).
+- **Recording viewer page**: `/recordings` page with list view (room name, date, duration, status) and Play button. API updated to return listings and clear messages when Egress storage not configured.
+- **PWA support**: Added `manifest.ts` (name, icons, standalone display, theme_color), `public/icon.svg`, and apple-web-app metadata. Sidebar updated with Recordings link.
+- **logic.py cleanup**: Removed aggressive reductionist prompt, made `_jargon_detection_enabled` default `False`, cleaned up `analyze_saliency` signature.
+- **File sharing**: Full file sharing system — `POST /api/files` (multipart upload, max 50MB), `GET /api/files` (list), `GET /api/files/[id]` (download). Files stored in `data/files/` directory with JSON index. LiveKit data channel broadcasts `file_shared` events to other participants. `FileSharingPanel` component in dashboard sidebar (drag-and-drop, progress indicator, download button). Dedicated `/files` page with upload button and full file list. Sidebar nav updated with Files link.
+- **CI hardening**: Fixed workflow — coverage paths use correct underscore dir names, added `myconf/` package to Ruff checks, proper `junit-xml` output, artifact upload. Added `[build-system]` (hatchling) to pyproject.toml so `uv sync` installs entry points correctly. Version bumped to 2.1.0 in pyproject.toml and sidebar. Real GitHub Actions badge in README replacing static badge.
+- **OIDC authentication via Authentik**: Full auth integration — `next-auth` v5 with Authentik OIDC provider. Middleware protects all dashboard routes (except guest join and health). Session-aware LiveKit token endpoint uses authenticated identity. Sign-in page, error page, SessionProvider wrapper, `.env.example` with auth configuration. Auth secret, OIDC client ID/secret/issuer configurable via env vars. No database required — JWT-based sessions.
+- **Multi-participant transcription**: New `TranscriptionSubstrate` in `apps/agent/transcription_substrate.py`. Subscribes to every participant's audio track and runs an independent STT stream per participant. Each stream pushes audio frames through Whisper (local) or Deepgram (cloud) STT. Final transcripts are broadcast to the room via LiveKit data channel as `{type: "transcription", speaker, transcript}` — the dashboard's existing `TranscriptionFeed` renders them automatically. Cleanup on participant disconnect.
+- **Docker build fixes**: Changed agent build context from `./apps/agent` to `.` (repo root) so the `myconf/` shared package is actually available at build time. Updated agent Dockerfile paths to match new context. Web Dockerfile verified working with `output: "standalone"`.
+- **Observability stack**: Added `docker-compose.observability.yaml` with Prometheus (port 19090), Loki (13100), Grafana (13000, auto-provisioned with datasources), and Promtail (log shipper). Prometheus scrapes: LiveKit (15580), conferencing-mcp (/metrics on 10721), remoting-mcp (/metrics on 10725), web dashboard (/api/metrics on 10886), agent (10887), Redis (16379). Grafana auto-configured with Prometheus + Loki datasources. New Prometheus metrics on all services — uptime, request count, LiveKit/Ollama reachability, model count. Log shipping via Promtail for `mcp_server.log` and `agent_industrial.log`.
+- **Dependency fix**: Added `livekit-plugins-openai` to root pyproject.toml (required by transcription substrate). STT import made lazy with graceful fallback when API key is missing.
+- **Loki config fixed**: Simplified to basic `tsdb` schema v13 with `common.path_prefix`. Removed incompatible `tsdb_shipper` config. Updated Prometheus targets to match Docker services only.
+- **Gitignore cleanup**: Added `data/`, `*.db`, `lancedb_data/`, `contacts_cache.json` to prevent runtime artifacts from being committed.
+
 ## [2.0.0] - 2026-04-06
 ### Added
 - **Teams++ AI Upgrade**: Major architectural shift to an autonomous meeting intelligence substrate.
