@@ -1,10 +1,10 @@
-set windows-shell := ["pwsh.exe", "-NoLogo", "-Command"]
+﻿set windows-shell := ["pwsh.exe", "-NoLogo", "-Command"]
 
 # ── Dashboard ─────────────────────────────────────────────────────────────────
 
 # Open the interactive recipe dashboard in the browser
 default:
-    @pwsh.exe -NoProfile -ExecutionPolicy Bypass -File ../mcp-central-docs/scripts/just-dashboard.ps1 -Path .
+    @just --list
 
 # ── Teams++ Orchestration ───────────────────────────────────────────────────
 
@@ -39,13 +39,29 @@ build-web:
 # Execute Ruff SOTA v13.1 linting across monorepo
 lint:
     Set-Location '{{justfile_directory()}}'
-    uv run ruff check apps/ packages/
+    uv run ruff check apps/ packages/ myconf/ tests/
 
 # Execute Ruff SOTA v13.1 fix and formatting
 fix:
     Set-Location '{{justfile_directory()}}'
-    uv run ruff check apps/ packages/ --fix --unsafe-fixes; \
-    uv run ruff format apps/ packages/
+    uv run ruff check apps/ packages/ myconf/ tests/ --fix --unsafe-fixes; \
+    uv run ruff format apps/ packages/ myconf/ tests/
+
+# Run pytest across monorepo
+test:
+    Set-Location '{{justfile_directory()}}'
+    uv run pytest
+
+# Run mypy type checking
+typecheck:
+    Set-Location '{{justfile_directory()}}'
+    uv run mypy apps/ packages/ myconf/ --ignore-missing-imports
+
+# Sync all Python dependencies
+install:
+    Set-Location '{{justfile_directory()}}'
+    uv sync --all-extras; \
+    uv pip install -e packages/conferencing_mcp -e packages/remoting_mcp
 
 # ── Hardening ─────────────────────────────────────────────────────────────────
 
@@ -72,3 +88,4 @@ clean:
 setup:
     Set-Location '{{justfile_directory()}}'
     .\setup.ps1
+
