@@ -2,6 +2,54 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.3.0] - Unreleased (Planned)
+### Added
+- **Test infrastructure overhaul**: 7 new test files (51 tests) with parametrized tool-level coverage.
+  - `test_tools_diagnostics` — heartbeat, dev_stats, logs, remote_support, forensics (9 tests)
+  - `test_tools_conferencing` — CRUD lifecycle: schedule, get, list, update, cancel, upcoming (7 tests)
+  - `test_tools_rooms` — room CRUD + participant mute/kick/list/send_data (9 tests)
+  - `test_tools_intelligence` — meeting_summary, action_items, translation (6 tests)
+  - `test_tools_signaling` — list_conferences, notify, inter_agent_ping (5 tests)
+  - `test_tools_remoting` — move_mouse, click_mouse parametrized, type_text, press_key (9 tests)
+  - `test_tools_participants` — invite, list_invited, remove_invited (4 tests)
+- **Shared test fixtures**: `mock_ctx` (FastMCP Context + sample), `mock_livekit_api` (8 LiveKit calls), `mock_subprocess`, `temp_conference_db` (temp SQLite), `temp_lancedb`.
+- **`@pytest.mark.parametrize`**: Button types, language targets, remote support actions.
+- **`[tool.coverage]`** config: source paths, omit patterns, report excludes added to `pyproject.toml`.
+- **Playwright E2E**: Base URL fixed 15500→10886; new `dashboard.spec.ts` (12 tests: nav, REST API, join flow).
+- **LiveKit 2026 Q1-Q2 upgrades**: Documented and configured latest LiveKit features.
+- **User turn duration limits** (`UserTurnLimitOptions`): Caps user speech at 60s. Graceful fallback for older SDKs.
+- **Agent auto-restart**: `AutoRestartPolicy.ALWAYS` on `WorkerOptions`. Graceful fallback.
+- **Structured JSON logging** config + **OpenTelemetry tracing** config + **Room auto-create** + **TURN hardening** docs.
+
+### Changed
+- **Test count**: 44→68 Python tests (+55%); 13→22 Playwright tests (+69%); total 83→116.
+- **`livekit.yaml`**: Expanded from 12 to 46 lines with 2026 security and observability config.
+- **`docs/LIVEKIT.md`**: Rewritten with 2026 feature section and updated config tables.
+- **`docs/FEATURES.md`**: Added Section 18 (LiveKit 2026 Upgrades) with feature/version table.
+
+### Fixed
+- Removed duplicate `temp_lancedb` fixture between conftest files; removed stale `apps/agent/pytest.ini`.
+- Playwright: `webServer` port 15500→10886 (fleet registry); dropped webkit (desktop-only).
+- **STUN server format (2026-06-04):** `rtc.stun_servers` entries must be `host:port` (e.g. `stun.l.google.com:19302`), not `stun:host:port` — caused HTTP 500 on `/rtc` for teleoperator-mcp publisher. Rebuild LiveKit Docker image after `livekit.yaml` edit.
+
+## [2.2.0] - 2026-05-22
+### Changed
+- **Monolith refactored**: `conferencing_mcp/mcp_server.py` (855 lines, 25 tools) split into `tools/` modules — `diagnostics.py` (7 tools), `signaling.py` (3 tools), `intelligence.py` (3 tools), `conferences.py` (9 tools), `rooms.py` (8 tools). Thin `mcp_server.py` orchestrator now imports tools via portmanteau `tools/__init__.py`.
+- **FastMCP 3.2 docstring SOTA**: All 38 MCP tools across conferencing_mcp and remoting_mcp now use `Annotated[T, Field(description="...")]` parameter annotations with mandatory `## Return Format` and `## Examples` sections. Zero `Args:` blocks remaining.
+- **Context injection for remoting_mcp**: All 8 remoting tools (`move_mouse`, `click_mouse`, `type_text`, `press_key`, `screen_resolution`, `join_meeting`, `leave_meeting`, `get_status`) now accept `ctx: Context` with correlation_id logging.
+- **`cor_id` boilerplate eliminated**: Shared `cid(ctx)` helper in each server's module replaces 19x `cor_id = getattr(ctx, "correlation_id", "GLOBAL")` across 6 files.
+
+### Fixed
+- **Version constraint**: Root `pyproject.toml` `fastmcp>=0.4.1` → `>=3.1.0,<4` to match actual FastMCP 3.2 usage.
+- **Private API leakage**: `_now_iso()` promoted to public `now_iso()` in `conference.py`; `conf.datetime.now(conf.timezone.utc)` replaced with direct `datetime.now(UTC)` import in tools.
+- **Missing package init**: Created `packages/conferencing_mcp/__init__.py` for proper relative imports.
+- **health_server.py bugs**: `_start_time` moved to class-level init (was race-condition); `_request_count` now increments before metrics string (was off-by-one).
+- **Lint free**: 36 ruff errors (unused imports, bare excepts, line length, import sorting, subprocess security warnings) all fixed.
+
+### Added
+- **justfile recipes**: `test` (pytest), `typecheck` (mypy), `install` (uv sync + pip install -e).
+- **justfile lint scope**: Widened from `apps/ packages/` to `apps/ packages/ myconf/ tests/`.
+
 ## [2.1.0] - 2026-05-01
 ### Added
 - **Screen sharing from dashboard**: Custom `ScreenShareControl` component wrapping LiveKit's `useScreenShare` with error handling, loading state, and visual feedback. Mounted alongside the ControlBar.
