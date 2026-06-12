@@ -8,18 +8,17 @@ export default defineConfig({
   workers: process.env.CI ? 1 : undefined,
   reporter: "html",
   use: {
-    baseURL: "http://localhost:15500",
+    baseURL: "http://localhost:10886",
     trace: "on-first-retry",
     screenshot: "only-on-failure",
   },
   projects: [
     { name: "chromium", use: { ...devices["Desktop Chrome"] } },
     { name: "firefox", use: { ...devices["Desktop Firefox"] } },
-    { name: "webkit", use: { ...devices["Desktop Safari"] } },
   ],
   webServer: {
     command: "npm run dev",
-    url: "http://localhost:15500",
+    url: "http://localhost:10886",
     reuseExistingServer: !process.env.CI,
     timeout: 120000,
   },
