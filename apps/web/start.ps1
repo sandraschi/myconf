@@ -1,4 +1,4 @@
-﻿Param([switch]$Headless, [switch]$Rebuild)
+Param([switch]$Headless, [switch]$Rebuild)
 
 # --- SOTA Headless Standard ---
 if ($Headless -and ($Host.UI.RawUI.WindowTitle -notmatch 'Hidden')) {
@@ -12,6 +12,13 @@ $WindowStyle = if ($Headless) { 'Hidden' } else { 'Normal' }
 # Port: 10886 (myconf frontend)
 
 $WebPort = 10886
+$FleetStartPath = Join-Path $ProjectRoot "scripts\FleetStartMode.ps1"
+if (-not (Test-Path -LiteralPath $FleetStartPath)) {
+    Write-Host "ERROR: Missing vendored launcher helper: $FleetStartPath" -ForegroundColor Red
+    exit 1
+}
+. $FleetStartPath
+
 Write-Host "Clearing port $WebPort..." -ForegroundColor Cyan
 npx --yes kill-port $WebPort 2>$null
 

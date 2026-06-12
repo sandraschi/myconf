@@ -1,4 +1,4 @@
-﻿Param([switch]$Headless)
+Param([switch]$Headless)
 
 # --- SOTA Headless Standard ---
 if ($Headless -and ($Host.UI.RawUI.WindowTitle -notmatch 'Hidden')) {
@@ -27,4 +27,12 @@ if ($process) {
 Write-Host "[EXEC] Launching FastMCP server..." -ForegroundColor Green
 # We use -u for unbuffered output to ensure logs capture in real-time
 python -u mcp_server.py sse --port $PORT
+
+
+$FleetStartPath = Join-Path $ProjectRoot "scripts\FleetStartMode.ps1"
+if (-not (Test-Path -LiteralPath $FleetStartPath)) {
+    Write-Host "ERROR: Missing vendored launcher helper: $FleetStartPath" -ForegroundColor Red
+    exit 1
+}
+. $FleetStartPath
 
