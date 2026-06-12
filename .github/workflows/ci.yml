@@ -6,12 +6,13 @@ on:
   pull_request:
     branches: [main, master]
 
+# Windows-only by design: remoting_mcp, contacts, and vision substrates are
+# Windows-native (pywin32/pynput/mss are unconditional deps). Do not add
+# ubuntu runners without platform markers in pyproject.toml.
+
 jobs:
   web:
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: apps/web
+    runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
       - name: Setup Node
@@ -20,17 +21,17 @@ jobs:
           node-version: "20"
           cache: "npm"
           cache-dependency-path: package-lock.json
-      - name: Install dependencies
+      - name: Install dependencies (workspace root)
         run: npm ci
       - name: Lint web
-        run: npm run lint
+        run: npm run lint --workspace=web
       - name: Type check web
-        run: npx tsc --noEmit
+        run: npx tsc --noEmit -p apps/web
       - name: Test web
-        run: npm run test
+        run: npm run test --workspace=web
 
   python:
-    runs-on: ubuntu-latest
+    runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
       - name: Install uv
@@ -42,14 +43,11 @@ jobs:
       - name: Install dependencies
         run: uv sync --dev
       - name: Ruff check
-        run: uv run ruff check apps/agent/ packages/ myconf/
+        run: uv run ruff check apps/agent/ packages/ myconf/ tests/
       - name: Ruff format check
-        run: uv run ruff format --check apps/agent/ packages/ myconf/
+        run: uv run ruff format --check apps/agent/ packages/ myconf/ tests/
       - name: Pytest
-        run: |
-          uv run pytest tests/ apps/agent/tests/ \
-            -v --tb=short \
-            --junit-xml=test-results.xml
+        run: uv run pytest tests/ apps/agent/tests/ -v --tb=short --junit-xml=test-results.xml
       - name: Upload test results
         if: always()
         uses: actions/upload-artifact@v4
