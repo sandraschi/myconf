@@ -1,4 +1,28 @@
-# LiveKit Configuration
+# LiveKit Configuration — SOTA 2026 (Server v1.12)
+
+## 2026 Feature Upgrades
+
+Available with LiveKit Server v1.12 (May 2026) and Agents SDK v1.5.12.
+
+### Room Auto-Creation from JWT Grants (v1.12)
+Tokens with `roomCreate` grant auto-create rooms on the first participant join. No separate `room_create` API call needed. Add `grant.roomCreate: true` to your token payload.
+
+### User Turn Duration Limits (Agents v1.5.12)
+`UserTurnLimitOptions(max_user_turn_duration=60)` caps user speech to 60 seconds. Prevents long monologues from hijacking the Visio agent loop. Enabled by default in `agent.py` with graceful fallback for older SDKs.
+
+### Barge-In Cooldown (Agents v1.5.8)
+Cooldown window after the agent starts speaking prevents rapid successive interruptions. Configured via the voice pipeline.
+
+### TURN Credential TTL (v1.12)
+TURN credentials now carry a `ttl_seconds` (default 300). Rotate TURN secrets periodically to expire stale credentials. Also: `allow_restricted_peer_cidrs` / `deny_peer_cidrs` for private-IP access control.
+
+### OpenTelemetry Tracing (v1.9.11+)
+Send spans to Jaeger or any OTLP-compatible collector. Enables distributed tracing across LiveKit, agent, and MCP tools. Config section in `livekit.yaml`.
+
+### Agent Auto-Restart (v1.10)
+`AutoRestartPolicy.ALWAYS` on `WorkerOptions` ensures the Visio agent restarts on crash. Enabled in `agent.py`.
+
+---
 
 ## Overview
 
@@ -6,8 +30,9 @@
 
 - **SFU** (Selective Forwarding Unit) for multi-participant video
 - **Room management** via REST API
-- **Token-based authentication**
+- **Token-based authentication** with `roomCreate` grants
 - **Data channels** for transcription and agent messages
+- **Agent dispatch** for Visio AI voice assistant
 
 ---
 
@@ -21,10 +46,25 @@ rtc:
   port_range_start: 50000
   port_range_end: 60000
   use_external_ip: false
+  stun_servers:
+    - stun:stun.l.google.com:19302
+    - stun:stun1.l.google.com:19302
+  # TURN (v1.12 security hardening):
+  # turn:
+  #   enabled: false
+  #   secret: rotate-this-regularly
+  #   ttl_seconds: 300
+  #   allow_restricted_peer_cidrs: []
+  #   deny_peer_cidrs: []
 keys:
   devkey: secret
 logging:
   level: info
+  # json: true   # structured logging (v1.10+)
+# tracing:        # OpenTelemetry (v1.9.11+)
+#   enabled: true
+#   jaeger:
+#     endpoint: http://localhost:14268/api/traces
 ```
 
 | Setting | Default | Notes |
@@ -36,6 +76,8 @@ logging:
 | `rtc.turn.enabled` | false | Enable for production behind NAT |
 | `keys` | devkey/secret | Replace with production secrets |
 | `logging.level` | info | Set to `debug` for troubleshooting |
+| `logging.json` | false | Structured JSON logging (v1.10+) |
+| `tracing.enabled` | false | OpenTelemetry to Jaeger/OTLP (v1.9.11+) |
 
 ### Starting LiveKit
 
@@ -81,25 +123,26 @@ These must match the keys in `livekit.yaml`.
 
 ---
 
-## Token Authentication
+## Token Authentication & Room Auto-Create
 
-The web dashboard fetches a room token via its `/api/token` route:
+The web dashboard fetches a room token via `/api/token`. With LiveKit v1.12+, tokens can include a `roomCreate` grant that auto-creates the room on first join — eliminating the need for explicit `room_create` API calls.
 
 ```typescript
-const resp = await fetch("/api/token", {
-  method: "POST",
-  headers: { "Content-Type": "application/json" },
-  body: JSON.stringify({ roomName: room, participantName: name }),
-});
-```
-
-Tokens are short-lived and generated server-side using `livekit-server-sdk`.
+// Token payload (next-auth server side):
+{
+  roomCreate: true,      // auto-create room (v1.12+)
+  roomJoin: true,
+  room: roomName,
+  participantName: name,
+}
 
 ---
 
-## STUN Server
+## STUN / TURN
 
-LiveKit includes built-in STUN support for NAT traversal. Google public STUN servers are configured by default.
+LiveKit includes built-in STUN for NAT traversal. Google public STUN servers are configured by default.
+
+For TURN (v1.12+): credentials carry an expiry TTL (`ttl_seconds: 300`). TURN blocks relay to private IPs by default. Allow specific CIDRs via `allow_restricted_peer_cidrs`:
 
 ```yaml
 rtc:

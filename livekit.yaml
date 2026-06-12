@@ -1,12 +1,57 @@
+# AG-Visio LiveKit Server Configuration — SOTA 2026 (v1.12)
+#
+# Key: https://docs.livekit.io/references/server/config/
+# Ports: WSS 15580, RTC 15581-15582, media 50000-60000
+
 port: 15580
+
 rtc:
   port_range_start: 50000
   port_range_end: 60000
   use_external_ip: false
   stun_servers:
-    - stun:stun.l.google.com:19302
-    - stun:stun1.l.google.com:19302
+    - stun.l.google.com:19302
+    - stun1.l.google.com:19302
+  # ▸ TURN credential hardening (v1.12 — May 2026)
+  #   Credentials now carry a TTL (time-to-live) to prevent stale token reuse.
+  #   Rotate `turn.secret` periodically to expire old credentials.
+  # turn:
+  #   enabled: false
+  #   domain: turn.example.com
+  #   secret: rotate-this-regularly
+  #   ttl_seconds: 300
+  #   # TURN permission hardening (v1.12):
+  #   # By default, TURN blocks relay to private IPs (10.0.0.0/8, 192.168.0.0/16, etc.)
+  #   # To allow specific private CIDRs:
+  #   allow_restricted_peer_cidrs: []
+  #   deny_peer_cidrs: []
+
+# ▸ Room auto-creation (v1.12): tokens with RoomCreate grant
+#   automatically create rooms on join — no manual room_create API needed.
+#   Use `grant.roomCreate: true` in token generation to leverage this.
+# room:
+#   auto_create: true   # implicit; enable via token grants
+
+# Agent configuration (v1.10+)
+# agent:
+#   job_restart_policy: always   # restart Visio agent on crash (v1.10)
+
 keys:
   devkey: secret
+
 logging:
   level: info
+  # ▸ Structured JSON logging (v1.10+, Mar 2026)
+  #   Recommended for Loki ingestion. Disable for human-readable console output.
+  # json: true
+
+# ▸ OpenTelemetry tracing (v1.9.11+, Jan 2026)
+#   Enable for distributed tracing across LiveKit → agent → MCP tools.
+#   Send spans to Jaeger or any OTLP-compatible collector.
+# tracing:
+#   enabled: true
+#   jaeger:
+#     endpoint: http://localhost:14268/api/traces
+#   # OTLP HTTP example:
+#   # otlp:
+#   #   endpoint: http://localhost:4318/v1/traces

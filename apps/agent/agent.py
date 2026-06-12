@@ -22,6 +22,11 @@ from livekit.agents import (
     cli,
     llm,
 )
+
+try:
+    from livekit.agents.job import AutoRestartPolicy
+except ImportError:
+    AutoRestartPolicy = None
 from livekit.agents.llm import LLMStream, function_tool
 from livekit.agents.voice import AgentSession
 from livekit.plugins import (
@@ -48,6 +53,15 @@ logging.basicConfig(
 logger = logging.getLogger("ag-visio-agent")
 
 load_dotenv()
+
+# UserTurnLimitOptions added in livekit-agents 1.5.12 (May 2026).
+# Caps user speech duration to prevent long monologues from hijacking the agent.
+try:
+    from livekit.agents.voice import UserTurnLimitOptions
+
+    _turn_limit_options = UserTurnLimitOptions(max_user_turn_duration=60.0)
+except ImportError:
+    _turn_limit_options = None
 
 # ===========================================================================
 # MCP DISCOVERY
@@ -365,14 +379,18 @@ async def entrypoint(ctx: JobContext) -> None:
             tts = __import__("livekit.plugins.piper", fromlist=["TTS"]).TTS()
             llm_engine = SOTAOllamaLLM(model="llama3.1")
 
-        assistant = AgentSession(
-            vad=vad,
-            stt=stt,
-            llm=llm_engine,
-            tts=tts,
-            turn_handling="auto",
-            tools=fnc_ctx,
-        )
+        assistant_kwargs = {
+            "vad": vad,
+            "stt": stt,
+            "llm": llm_engine,
+            "tts": tts,
+            "turn_handling": "auto",
+            "tools": fnc_ctx,
+        }
+        if _turn_limit_options:
+            assistant_kwargs["turn_limit"] = _turn_limit_options
+
+        assistant = AgentSession(**assistant_kwargs)
 
         @ctx.room.on("data_received")
         def on_data_received(data: rtc.DataPacket):
@@ -427,4 +445,7 @@ async def entrypoint(ctx: JobContext) -> None:
 
 
 if __name__ == "__main__":
-    cli.run_app(WorkerOptions(entrypoint_fnc=entrypoint))
+    _worker_kwargs = {"entrypoint_fnc": entrypoint}
+    if AutoRestartPolicy is not None:
+        _worker_kwargs["job_restart_policy"] = AutoRestartPolicy.ALWAYS
+    cli.run_app(WorkerOptions(**_worker_kwargs))

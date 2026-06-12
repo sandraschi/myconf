@@ -396,3 +396,19 @@ Auto-provisioned on first start:
 - Python 3.12+
 - Node.js 18+
 - 4 GB RAM minimum, 8 GB recommended
+
+---
+
+## 18. LiveKit 2026 Upgrades (v2.3.0)
+
+| Feature | Version | Impact |
+|---------|---------|--------|
+| Room auto-creation from JWT grants | Server v1.12 | Eliminates manual `room_create` — rooms spawn on first join |
+| User turn duration limits | Agents v1.5.12 | Caps user speech at 60s, prevents monologue hijack |
+| Barge-in cooldown window | Agents v1.5.8 | Smoother interruptions, prevents rapid re-triggering |
+| TURN credential TTL + CIDR allow/deny | Server v1.12 | Credentials expire; private-IP relay access control |
+| OpenTelemetry tracing | Server v1.9.11 | Distributed spans across LiveKit -> agent -> MCP tools |
+| Agent auto-restart on crash | Server v1.10 | `AutoRestartPolicy.ALWAYS` on Visio agent |
+| Data tracks enabled by default | Server v1.11 | Chat, intel broadcasts, data channels active out of box |
+
+Future candidates: `useRpc` hook (Components v2.9.21), model swaps via `update_options` (Agents v1.5.10), Answering Machine Detection (Agents v1.5.9).

@@ -171,11 +171,19 @@ myconf/
 │       └── __tests__/
 ├── packages/
 │   ├── conferencing_mcp/           # MCP server (port 10720)
-│   │   ├── mcp_server.py           # FastMCP 3.2+ server
-│   │   ├── conference.py           # SQLite + LiveKit API
-│   │   └── health_server.py        # HTTP health endpoint
+│   │   ├── __init__.py              # Package marker
+│   │   ├── mcp_server.py            # FastMCP 3.2+ server (thin orchestrator)
+│   │   ├── tools/                   # Tool modules (import-time registration)
+│   │   │   ├── __init__.py          # Portmanteau re-export
+│   │   │   ├── diagnostics.py       # Dev stats, system logs, heartbeat, remote support, forensics (7 tools)
+│   │   │   ├── signaling.py         # Active conf listing, inter-agent ping, notify (3 tools)
+│   │   │   ├── intelligence.py      # Meeting summary, action items, translation (3 tools)
+│   │   │   ├── conferences.py       # Schedule/get/list/update/cancel/upcoming, participant mgmt (9 tools)
+│   │   │   └── rooms.py             # LiveKit room CRUD, participant list/kick/mute/send (8 tools)
+│   │   ├── conference.py            # SQLite + LiveKit API data layer
+│   │   └── health_server.py         # HTTP health + Prometheus metrics endpoint
 │   ├── remoting_mcp/               # MCP server (port 10725)
-│   │   └── mcp_server.py           # Screen capture + input injection
+│   │   └── mcp_server.py            # Screen capture + input injection
 │   └── ui/                         # Shared React components
 ├── tests/                          # Monorepo-wide Python tests
 ├── docker-compose.yaml             # Full stack: livekit + redis + web + agent
