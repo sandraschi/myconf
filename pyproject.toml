@@ -1,11 +1,11 @@
 [project]
 name = "myconf"
-version = "2.1.0"
+version = "2.2.0"
 description = "AG-Visio / Teams++ — AI-powered video conferencing with voice assistant and remote desktop"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
-    "fastmcp>=0.4.1",
+    "fastmcp>=3.1.0,<4",
     "livekit>=1.0.0",
     "livekit-api>=1.0.0",
     "livekit-agents>=1.0.0",
@@ -47,6 +47,17 @@ build-backend = "hatchling.build"
 asyncio_mode = "auto"
 testpaths = ["tests", "apps/agent/tests"]
 python_files = "test_*.py"
+
+[tool.coverage.run]
+source = ["myconf", "packages", "apps/agent"]
+omit = ["*/tests/*", "*/test_*", "*/__pycache__/*"]
+
+[tool.coverage.report]
+exclude_also = [
+    "if __name__ == .__main__.:",
+    "raise NotImplementedError",
+    "@(abc\\.)?abstractmethod",
+]
 
 [tool.ruff]
 line-length = 120

@@ -30,6 +30,12 @@ logging.basicConfig(
 logger = logging.getLogger("ag-visio-mcp")
 logger.addFilter(CorrelationIdFilter())
 
+
+def cid(ctx) -> str:
+    """Extract correlation_id from Context, defaulting to 'GLOBAL'."""
+    return getattr(ctx, "correlation_id", "GLOBAL")
+
+
 mcp = FastMCP("conferencing-mcp", version="3.1.2")
 
 # MCP Bridge: ProxyProvider for multi-server federation

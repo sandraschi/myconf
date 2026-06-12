@@ -1,18 +1,30 @@
 import logging
 import time
-from typing import Any
+from typing import Annotated, Any
 
 from fastmcp import Context
+from pydantic import Field
 
-from ..mcp_server import db, embedding_model, mcp
+from ..mcp_server import cid, db, embedding_model, mcp
 
 logger = logging.getLogger("ag-visio-mcp")
 
 
 @mcp.tool()
-async def generate_meeting_summary(ctx: Context, room_name: str, transcript: str) -> dict[str, Any]:
-    """Summarize the meeting transcript and persist to the memory substrate."""
-    cor_id = getattr(ctx, "correlation_id", "GLOBAL")
+async def generate_meeting_summary(
+    ctx: Context,
+    room_name: Annotated[str, Field(description="Name of the active LiveKit room.")],
+    transcript: Annotated[str, Field(description="Full text of the conversation to summarize.")],
+) -> dict[str, Any]:
+    """Summarize the meeting transcript and persist to the memory substrate.
+
+    ## Return Format
+    {"success": bool, "summary": str, "room_name": str, "persisted": bool, "correlation_id": str}
+
+    ## Examples
+    await generate_meeting_summary(room_name="standup", transcript="Alice: Good morning team...")
+    """
+    _cid = cid(ctx)
 
     prompt = f"Summarize the following meeting transcript for room '{room_name}':\n\n{transcript}"
 
@@ -39,17 +51,28 @@ async def generate_meeting_summary(ctx: Context, room_name: str, transcript: str
             "summary": summary_text,
             "room_name": room_name,
             "persisted": True,
-            "correlation_id": cor_id,
+            "correlation_id": _cid,
         }
     except Exception as e:
-        logger.error(f"Summary generation failed: {e}", extra={"correlation_id": cor_id})
+        logger.error(f"Summary generation failed: {e}", extra={"correlation_id": _cid})
         return {"success": False, "error": str(e)}
 
 
 @mcp.tool()
-async def extract_action_items(ctx: Context, room_name: str, transcript: str) -> dict[str, Any]:
-    """Extract action items and tasks from the meeting transcript."""
-    cor_id = getattr(ctx, "correlation_id", "GLOBAL")
+async def extract_action_items(
+    ctx: Context,
+    room_name: Annotated[str, Field(description="Name of the active LiveKit room.")],
+    transcript: Annotated[str, Field(description="Full text of the conversation to analyze.")],
+) -> dict[str, Any]:
+    """Extract action items and tasks from the meeting transcript.
+
+    ## Return Format
+    {"success": bool, "action_items": str, "room_name": str, "persisted": bool, "correlation_id": str}
+
+    ## Examples
+    await extract_action_items(room_name="sprint-planning", transcript="Bob: I'll take the login page...")
+    """
+    _cid = cid(ctx)
 
     prompt = (
         f"Extract a bulleted list of action items and assigned tasks from this meeting transcript "
@@ -79,16 +102,27 @@ async def extract_action_items(ctx: Context, room_name: str, transcript: str) ->
             "action_items": items_text,
             "room_name": room_name,
             "persisted": True,
-            "correlation_id": cor_id,
+            "correlation_id": _cid,
         }
     except Exception as e:
-        logger.error(f"Action item extraction failed: {e}", extra={"correlation_id": cor_id})
+        logger.error(f"Action item extraction failed: {e}", extra={"correlation_id": _cid})
         return {"success": False, "error": str(e)}
 
 
 @mcp.tool()
-async def set_translation_language(ctx: Context, language: str) -> str:
-    """Set the target language for live translation in the current session."""
-    cor_id = getattr(ctx, "correlation_id", "GLOBAL")
-    logger.info(f"Setting translation language to: {language}", extra={"correlation_id": cor_id})
+async def set_translation_language(
+    ctx: Context,
+    language: Annotated[str, Field(description="Target language, e.g. 'Japanese', 'German', 'Spanish'.")],
+) -> str:
+    """Set the target language for live translation in the current session.
+
+    ## Return Format
+    str — confirmation message with the target language
+
+    ## Examples
+    await set_translation_language(language="Japanese")
+    await set_translation_language(language="German")
+    """
+    _cid = cid(ctx)
+    logger.info(f"Setting translation language to: {language}", extra={"correlation_id": _cid})
     return f"TRANSLATION_MODE_ACTIVE: Target set to '{language}'. All subsequent transcripts will be processed."

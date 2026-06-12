@@ -2,20 +2,28 @@ import logging
 import socket
 import subprocess
 import time
-from typing import Any
+from typing import Annotated, Any
 
 from fastmcp import Context
+from pydantic import Field
 
-from ..mcp_server import mcp
+from ..mcp_server import cid, mcp
 
 logger = logging.getLogger("ag-visio-mcp")
 
 
 @mcp.tool()
 async def get_dev_stats(ctx: Context) -> str:
-    """Get granular local development statistics. SOTA Industrial standard."""
-    cor_id = getattr(ctx, "correlation_id", "GLOBAL")
-    logger.info("Executing get_dev_stats tool", extra={"correlation_id": cor_id})
+    """Get granular local development statistics. SOTA Industrial standard.
+
+    ## Return Format
+    str — multi-line report with git branch, last commit, staged changes, and storage volumes
+
+    ## Examples
+    await get_dev_stats()
+    """
+    _cid = cid(ctx)
+    logger.info("Executing get_dev_stats tool", extra={"correlation_id": _cid})
     try:
         git_branch = subprocess.run(["git", "branch", "--show-current"], capture_output=True, text=True).stdout.strip()  # noqa: S607
         git_status = subprocess.run(["git", "status", "--short"], capture_output=True, text=True).stdout  # noqa: S607
@@ -49,15 +57,27 @@ async def get_dev_stats(ctx: Context) -> str:
             f"{disk_proc.stdout}"
         )
     except Exception as e:
-        logger.error(f"Dev stats failed: {e!s}", extra={"correlation_id": cor_id})
+        logger.error(f"Dev stats failed: {e!s}", extra={"correlation_id": _cid})
         return f"ERROR [SOTA-E01]: Substrate telemetry failed. {e!s}"
 
 
 @mcp.tool()
-async def query_system_logs(ctx: Context, pattern: str, limit: int = 10) -> str:
-    """Query Windows System logs for specific patterns with SOTA filtering."""
-    cor_id = getattr(ctx, "correlation_id", "GLOBAL")
-    logger.info(f"Querying system logs for pattern: {pattern}", extra={"correlation_id": cor_id})
+async def query_system_logs(
+    ctx: Context,
+    pattern: Annotated[str, Field(description="Regex pattern to match in system log messages.")],
+    limit: Annotated[int, Field(description="Max matching entries to return.", ge=1)] = 10,
+) -> str:
+    """Query Windows System logs for specific patterns with SOTA filtering.
+
+    ## Return Format
+    str — formatted log entries or "RES [SOTA-N01]: No matches found for pattern."
+
+    ## Examples
+    await query_system_logs(pattern="LiveKit|Ollama")
+    await query_system_logs(pattern="Error", limit=20)
+    """
+    _cid = cid(ctx)
+    logger.info(f"Querying system logs for pattern: {pattern}", extra={"correlation_id": _cid})
     try:
         cmd = (
             f"Get-EventLog -LogName System -Newest 100 | "
@@ -68,17 +88,29 @@ async def query_system_logs(ctx: Context, pattern: str, limit: int = 10) -> str:
 
         return proc.stdout or "RES [SOTA-N01]: No matches found for pattern."
     except subprocess.CalledProcessError as e:
-        logger.error(f"Log query failed: {e.stderr}", extra={"correlation_id": cor_id})
+        logger.error(f"Log query failed: {e.stderr}", extra={"correlation_id": _cid})
         return f"ERROR [SOTA-E02]: Log query failed. {e.stderr}"
     except Exception as e:
-        logger.critical(f"Error in query_system_logs: {e!s}", extra={"correlation_id": cor_id})
+        logger.critical(f"Error in query_system_logs: {e!s}", extra={"correlation_id": _cid})
         return "CRITICAL FAILURE: Log substrate unavailable."
 
 
 @mcp.tool()
-async def sample_log_analysis(ctx: Context, pattern: str, iterations: int = 3) -> dict[str, Any]:
-    """Iteratively sample and analyze system logs for anomaly detection and root cause analysis."""
-    cor_id = getattr(ctx, "correlation_id", "GLOBAL")
+async def sample_log_analysis(
+    ctx: Context,
+    pattern: Annotated[str, Field(description="Log pattern to iteratively sample.")],
+    iterations: Annotated[int, Field(description="Number of sampling rounds.", ge=1)] = 3,
+) -> dict[str, Any]:
+    """Iteratively sample and analyze system logs for anomaly detection and root cause analysis.
+
+    ## Return Format
+    {"sampling_complete": bool, "results": list, "metadata": {"pattern": str, "correlation_id": str}}
+
+    ## Examples
+    await sample_log_analysis(pattern="LiveKit")
+    await sample_log_analysis(pattern="Ollama", iterations=5)
+    """
+    _cid = cid(ctx)
 
     results = []
     current_limit = 5
@@ -101,15 +133,22 @@ async def sample_log_analysis(ctx: Context, pattern: str, iterations: int = 3) -
         "metadata": {
             "pattern": pattern,
             "model_alignment": "SOTA-2026",
-            "correlation_id": cor_id,
+            "correlation_id": _cid,
         },
     }
 
 
 @mcp.tool()
 async def get_substrate_heartbeat(ctx: Context) -> dict[str, Any]:
-    """Perform deep heartbeat analysis of LiveKit and Ollama substrates."""
-    cor_id = getattr(ctx, "correlation_id", "GLOBAL")
+    """Perform deep heartbeat analysis of LiveKit and Ollama substrates.
+
+    ## Return Format
+    {"timestamp": str, "heartbeat": {"livekit": ..., "ollama": ..., "system": ...}, "correlation_id": str}
+
+    ## Examples
+    await get_substrate_heartbeat()
+    """
+    _cid = cid(ctx)
 
     heartbeat = {
         "livekit": {"status": "UNKNOWN", "version": "N/A", "latency_ms": -1},
@@ -157,14 +196,21 @@ async def get_substrate_heartbeat(ctx: Context) -> dict[str, Any]:
     return {
         "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
         "heartbeat": heartbeat,
-        "correlation_id": cor_id,
+        "correlation_id": _cid,
         "sota_compliant": True,
     }
 
 
 @mcp.tool()
 async def orchestrate_industrial_diagnostics(ctx: Context) -> dict[str, Any]:
-    """Execute a full-stack industrial diagnostic pass. SOTA-2026 methodology."""
+    """Execute a full-stack industrial diagnostic pass. SOTA-2026 methodology.
+
+    ## Return Format
+    {"status": str, "heartbeat": dict, "critical_logs": str, "recommendation": str, "correlation_id": str}
+
+    ## Examples
+    await orchestrate_industrial_diagnostics()
+    """
     heartbeat = await get_substrate_heartbeat(ctx)
     logs = await query_system_logs(ctx, pattern="LiveKit|Ollama", limit=5)
 
@@ -175,14 +221,27 @@ async def orchestrate_industrial_diagnostics(ctx: Context) -> dict[str, Any]:
         "recommendation": "All substrates nominal."
         if heartbeat["heartbeat"]["livekit"]["status"] == "ALIVE"
         else "Manual substrate restart required.",
-        "correlation_id": getattr(ctx, "correlation_id", "GLOBAL"),
+        "correlation_id": cid(ctx),
     }
 
 
 @mcp.tool()
-async def orchestrate_remote_support(ctx: Context, action: str = "status") -> dict[str, Any]:
-    """Orchestrate Remote Support via native Windows Remote Desktop or RustDesk."""
-    cor_id = getattr(ctx, "correlation_id", "GLOBAL")
+async def orchestrate_remote_support(
+    ctx: Context,
+    action: Annotated[
+        str, Field(description="'status' to check availability, 'prepare' to launch RustDesk.")
+    ] = "status",
+) -> dict[str, Any]:
+    """Orchestrate Remote Support via native Windows Remote Desktop or RustDesk.
+
+    ## Return Format
+    {"success": bool, "status": str, "rustdesk_installed": bool, "correlation_id": str, ...}
+
+    ## Examples
+    await orchestrate_remote_support()
+    await orchestrate_remote_support(action="prepare")
+    """
+    _cid = cid(ctx)
 
     heartbeat_data = await get_substrate_heartbeat(ctx)
 
@@ -221,40 +280,50 @@ async def orchestrate_remote_support(ctx: Context, action: str = "status") -> di
             if rustdesk_found
             else "RustDesk not found. Install from https://rustdesk.com",
             "health_snapshot": heartbeat_data,
-            "correlation_id": cor_id,
+            "correlation_id": _cid,
         }
     elif action == "prepare":
         if not rustdesk_found:
             return {
                 "success": False,
                 "error": "RustDesk not installed. Cannot prepare remote support.",
-                "correlation_id": cor_id,
+                "correlation_id": _cid,
             }
         try:
-            import subprocess
+            import subprocess as sp
 
-            proc = subprocess.Popen([rustdesk_path], shell=True)  # noqa: S602
+            proc = sp.Popen([rustdesk_path], shell=True)  # noqa: S602
             return {
                 "success": True,
                 "rustdesk_pid": proc.pid,
                 "service_status": "LAUNCHED",
                 "message": f"RustDesk launched from {rustdesk_path}",
-                "correlation_id": cor_id,
+                "correlation_id": _cid,
             }
         except Exception as e:
             return {
                 "success": False,
                 "error": f"Failed to start RustDesk: {e}",
-                "correlation_id": cor_id,
+                "correlation_id": _cid,
             }
 
     return {"success": False, "error": f"Unknown action: {action}"}
 
 
 @mcp.tool()
-async def sample_system_forensics(ctx: Context, anomaly: str) -> str:
-    """Leverage AI sampling to perform deep forensics on system anomalies. SOTA agentic workflow."""
-    cor_id = getattr(ctx, "correlation_id", "GLOBAL")
+async def sample_system_forensics(
+    ctx: Context,
+    anomaly: Annotated[str, Field(description="Description of the system anomaly to investigate.")],
+) -> str:
+    """Leverage AI sampling to perform deep forensics on system anomalies. SOTA agentic workflow.
+
+    ## Return Format
+    str — forensic report from the LLM
+
+    ## Examples
+    await sample_system_forensics(anomaly="LiveKit server unreachable on port 15580")
+    """
+    _cid = cid(ctx)
 
     prompt = f"Analyze this system anomaly in the AG-Visio substrate: {anomaly}. Check logs and health status."
 
@@ -262,5 +331,5 @@ async def sample_system_forensics(ctx: Context, anomaly: str) -> str:
         analysis = await ctx.sample(prompt, max_tokens=500)
         return f"FORENSIC_REPORT [SOTA-F01]: {analysis.content.text}"
     except Exception as e:
-        logger.error(f"Forensics sampling failed: {e!s}", extra={"correlation_id": cor_id})
+        logger.error(f"Forensics sampling failed: {e!s}", extra={"correlation_id": _cid})
         return f"ERROR [SOTA-E05]: Forensics substrate timed out. {e!s}"

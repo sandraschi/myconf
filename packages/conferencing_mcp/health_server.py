@@ -13,6 +13,9 @@ logger = logging.getLogger("conferencing-health")
 
 
 class MetricsHandler(BaseHTTPRequestHandler):
+    _start_time = time.time()
+    _request_count = 0
+
     def do_GET(self):
         if self.path == "/health":
             checks = {
@@ -29,6 +32,7 @@ class MetricsHandler(BaseHTTPRequestHandler):
         elif self.path == "/metrics":
             lk = check_tcp_port("localhost", 15580)
             ol = check_ollama()
+            self._request_count += 1
             metrics = (
                 "# HELP livekit_up LiveKit server reachability\n"
                 "# TYPE livekit_up gauge\n"
@@ -47,7 +51,7 @@ class MetricsHandler(BaseHTTPRequestHandler):
                 f"mcp_uptime_seconds {time.time() - self._start_time:.0f}\n"
                 "# HELP mcp_requests_total Total requests served\n"
                 "# TYPE mcp_requests_total counter\n"
-                f"mcp_requests_total {getattr(self, '_request_count', 0)}\n"
+                f"mcp_requests_total {self._request_count}\n"
             )
             self._request_count = getattr(self, "_request_count", 0) + 1
             self.send_response(200)
@@ -65,8 +69,6 @@ class MetricsHandler(BaseHTTPRequestHandler):
 
 def run_health_server(port: int = 10721):
     server = HTTPServer(("0.0.0.0", port), MetricsHandler)  # noqa: S104
-    MetricsHandler._start_time = time.time()
-    MetricsHandler._request_count = 0
     logger.info(f"Health + metrics endpoint on port {port}")
     server.serve_forever()
 

@@ -5,14 +5,13 @@ Screen capture, mouse/keyboard injection, and LiveKit screen publishing.
 
 import asyncio
 import logging
-import os
-from typing import Literal
+from typing import Annotated, Literal
 
 import mss
 import numpy as np
 from fastmcp import Context, FastMCP
-from fastmcp.server import create_proxy
 from livekit import rtc
+from pydantic import Field
 from pynput import keyboard, mouse
 
 logging.basicConfig(level=logging.INFO)
@@ -20,17 +19,10 @@ logger = logging.getLogger("remoting-mcp")
 
 mcp = FastMCP("remoting-substrate")
 
-# MCP Bridge: ProxyProvider for multi-server federation
-_bridge_urls = os.getenv("MCP_BRIDGE_URLS", "")
-if _bridge_urls:
-    for _url in _bridge_urls.split(","):
-        _url = _url.strip()
-        if _url:
-            try:
-                mcp.add_provider(create_proxy(_url))
-                logger.info("MCP bridge registered: %s", _url)
-            except Exception as e:
-                logger.warning("MCP bridge failed for %s: %s", _url, e)
+
+def cid(ctx) -> str:
+    return getattr(ctx, "correlation_id", "GLOBAL")
+
 
 mouse_ctrl = mouse.Controller()
 kb_ctrl = keyboard.Controller()
@@ -66,38 +58,81 @@ def _bgra_to_i420(bgra_frame: np.ndarray) -> bytes:
 
 
 @mcp.tool()
-def move_mouse(ctx: Context, x: int, y: int) -> str:
-    """Move the system cursor to absolute coordinates (x, y)."""
-    cor_id = getattr(ctx, "correlation_id", "GLOBAL")
+def move_mouse(
+    ctx: Context,
+    x: Annotated[int, Field(description="Absolute X coordinate (pixels).")],
+    y: Annotated[int, Field(description="Absolute Y coordinate (pixels).")],
+) -> str:
+    """Move the system cursor to absolute coordinates (x, y).
+
+    ## Return Format
+    str — confirmation with new coordinates
+
+    ## Examples
+    move_mouse(x=500, y=300)
+    """
+    _cid = cid(ctx)
     mouse_ctrl.position = (x, y)
-    logger.info("Mouse moved to %d, %d", x, y, extra={"correlation_id": cor_id})
+    logger.info("Mouse moved to %d, %d", x, y, extra={"correlation_id": _cid})
     return f"Mouse moved to {x}, {y}"
 
 
 @mcp.tool()
-def click_mouse(ctx: Context, button: Literal["left", "right", "middle"] = "left") -> str:
-    """Perform a mouse click."""
-    cor_id = getattr(ctx, "correlation_id", "GLOBAL")
+def click_mouse(
+    ctx: Context,
+    button: Annotated[Literal["left", "right", "middle"], Field(description="Mouse button to click.")] = "left",
+) -> str:
+    """Perform a mouse click.
+
+    ## Return Format
+    str — confirmation with button clicked
+
+    ## Examples
+    click_mouse()
+    click_mouse(button="right")
+    """
+    _cid = cid(ctx)
     btn = mouse.Button.left
     if button == "right":
         btn = mouse.Button.right
     elif button == "middle":
         btn = mouse.Button.middle
     mouse_ctrl.click(btn)
-    logger.info("%s click performed", button, extra={"correlation_id": cor_id})
+    logger.info("%s click performed", button, extra={"correlation_id": _cid})
     return f"Performed {button} click"
 
 
 @mcp.tool()
-def type_text(ctx: Context, text: str) -> str:
-    """Type a string of text into the active window."""
+def type_text(
+    ctx: Context,
+    text: Annotated[str, Field(description="String to type into the active window.")],
+) -> str:
+    """Type a string of text into the active window.
+
+    ## Return Format
+    str — confirmation with typed text
+
+    ## Examples
+    type_text(text="Hello, World!")
+    """
     kb_ctrl.type(text)
     return f"Typed: {text}"
 
 
 @mcp.tool()
-def press_key(ctx: Context, key_name: str) -> str:
-    """Press a specific key (e.g., 'enter', 'esc', 'tab')."""
+def press_key(
+    ctx: Context,
+    key_name: Annotated[str, Field(description="Key to press, e.g. 'enter', 'esc', 'tab', or a character.")],
+) -> str:
+    """Press a specific key (e.g., 'enter', 'esc', 'tab').
+
+    ## Return Format
+    str — confirmation with key name or error message
+
+    ## Examples
+    press_key(key_name="enter")
+    press_key(key_name="a")
+    """
     try:
         k = getattr(keyboard.Key, key_name, key_name)
         kb_ctrl.press(k)
@@ -109,7 +144,14 @@ def press_key(ctx: Context, key_name: str) -> str:
 
 @mcp.tool()
 def screen_resolution(ctx: Context) -> str:
-    """Return the current primary monitor resolution."""
+    """Return the current primary monitor resolution.
+
+    ## Return Format
+    str — "{width}x{height}" e.g. "1920x1080"
+
+    ## Examples
+    screen_resolution()
+    """
     monitor = sct.monitors[1]
     return f"{monitor['width']}x{monitor['height']}"
 
@@ -150,8 +192,19 @@ async def publish_screen_loop(video_source: rtc.VideoSource):
 
 
 @mcp.tool()
-async def join_meeting(ctx: Context, url: str, token: str) -> str:
-    """Join a LiveKit room and start publishing the screen as a video track."""
+async def join_meeting(
+    ctx: Context,
+    url: Annotated[str, Field(description="LiveKit WebSocket URL, e.g. 'ws://localhost:7880'.")],
+    token: Annotated[str, Field(description="LiveKit access token for the room.")],
+) -> str:
+    """Join a LiveKit room and start publishing the screen as a video track.
+
+    ## Return Format
+    str — connection status with room name and resolution, or error message
+
+    ## Examples
+    await join_meeting(url="ws://localhost:7880", token="eyJhbGciOi...")
+    """
     if state.room and state.room.is_connected:
         return "Already connected to a room."
 
@@ -183,7 +236,14 @@ async def join_meeting(ctx: Context, url: str, token: str) -> str:
 
 @mcp.tool()
 async def leave_meeting(ctx: Context) -> str:
-    """Leave the current LiveKit room and stop screen publishing."""
+    """Leave the current LiveKit room and stop screen publishing.
+
+    ## Return Format
+    str — disconnection status
+
+    ## Examples
+    await leave_meeting()
+    """
     if state.screen_task:
         state.is_publishing = False
         state.screen_task.cancel()
@@ -197,13 +257,20 @@ async def leave_meeting(ctx: Context) -> str:
 
 @mcp.tool()
 def get_status(ctx: Context) -> dict:
-    """Return the current remoting substrate status."""
-    cor_id = getattr(ctx, "correlation_id", "GLOBAL")
+    """Return the current remoting substrate status.
+
+    ## Return Format
+    {"connected": bool, "publishing": bool, "room_name": str|null, "correlation_id": str}
+
+    ## Examples
+    get_status()
+    """
+    _cid = cid(ctx)
     return {
         "connected": state.room is not None and state.room.is_connected,
         "publishing": state.is_publishing,
         "room_name": state.room.name if state.room else None,
-        "correlation_id": cor_id,
+        "correlation_id": _cid,
     }
 
 

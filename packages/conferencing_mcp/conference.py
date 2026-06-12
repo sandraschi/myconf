@@ -99,7 +99,7 @@ def _lk_room_service():
     return livekit_api
 
 
-def _now_iso() -> str:
+def now_iso() -> str:
     return datetime.now(UTC).isoformat().replace("+00:00", "Z")
 
 
@@ -133,7 +133,7 @@ def schedule_conference(
         The created conference record as a dict.
     """
     cid = str(uuid.uuid4())
-    now = _now_iso()
+    now = now_iso()
     meta_str = json.dumps(metadata or {})
     with _get_db() as conn:
         conn.execute(
@@ -213,7 +213,7 @@ def update_conference(conference_id: str, **fields: Any) -> dict[str, Any]:
     updates = {k: v for k, v in fields.items() if k in allowed}
     if not updates:
         raise ValueError("No valid fields to update.")
-    updates["updated_at"] = _now_iso()
+    updates["updated_at"] = now_iso()
     set_clause = ", ".join(f"{k}=?" for k in updates)
     values = [*list(updates.values()), conference_id]
     with _get_db() as conn:
@@ -241,7 +241,7 @@ def invite_participant(
     # Check the conference exists
     get_conference(conference_id)
     pid = str(uuid.uuid4())
-    now = _now_iso()
+    now = now_iso()
     with _get_db() as conn:
         conn.execute(
             """

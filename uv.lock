@@ -1825,7 +1825,7 @@ wheels = [
 
 [[package]]
 name = "myconf"
-version = "2.1.0"
+version = "2.2.0"
 source = { editable = "." }
 dependencies = [
     { name = "aiohttp" },
@@ -1863,7 +1863,7 @@ dev = [
 requires-dist = [
     { name = "aiohttp", specifier = ">=3.9.0" },
     { name = "fastembed", specifier = ">=0.4.0" },
-    { name = "fastmcp", specifier = ">=0.4.1" },
+    { name = "fastmcp", specifier = ">=3.1.0,<4" },
     { name = "lancedb", specifier = ">=0.17.0" },
     { name = "livekit", specifier = ">=1.0.0" },
     { name = "livekit-agents", specifier = ">=1.0.0" },
