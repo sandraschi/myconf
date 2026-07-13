@@ -1,0 +1,14 @@
+{
+    "product_name": "Teleconference MCP",
+    "install_dir": "%LOCALAPPDATA%\\Teleconference MCP",
+    "operator_exe": "teleconference-mcp-native.exe",
+    "backend_process_names": ["teleconference-mcp-native", "teleconference-mcp-backend"],
+    "backend_port": 10720,
+    "health_path": "/health",
+    "diagnostics_path": "/api/v1/diagnostics",
+    "feature_smoke_path": "/api/v1/diagnostics",
+    "window_title_re": "Teleconference MCP",
+    "nsis_glob": "native/target/release/bundle/nsis/Teleconference MCP_*_x64-setup.exe",
+    "bridge_ok_text": "REST bridge reachable",
+    "uninstall_registry_filter": "*Teleconference MCP*"
+}
