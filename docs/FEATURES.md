@@ -230,7 +230,7 @@ Each service provides health check capabilities:
 |---------|-------------|----------------|
 | conferencing-mcp | Heartbeat tool | LiveKit (TCP 15580), Ollama (HTTP 11434), system metrics |
 | Web dashboard | `/health` page | LiveKit reachability, active rooms |
-| Shared module | `myconf/health.py` | Generic TCP probe + Ollama status |
+| Shared module | `teleconference_mcp/health.py` | Generic TCP probe + Ollama status |
 
 Health responses follow a standard format:
 

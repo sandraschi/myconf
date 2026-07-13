@@ -9,7 +9,7 @@ $WindowStyle = if ($Headless) { 'Hidden' } else { 'Normal' }
 # ------------------------------
 
 # Sandra Schipal | SOTA 2026 | Agent Startup Protocol
-# Port: 10887 (myconf backend)
+# Port: 10887 (teleconference-mcp backend)
 
 $WebPort = 10887
 $FleetStartPath = Join-Path $ProjectRoot "scripts\FleetStartMode.ps1"

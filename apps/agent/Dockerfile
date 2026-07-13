@@ -1,5 +1,5 @@
 # AG-Visio Voice Agent — full dockerization
-# Build from repo root: docker build -f apps/agent/Dockerfile -t myconf-agent .
+# Build from repo root: docker build -f apps/agent/Dockerfile -t teleconference-mcp-agent .
 FROM python:3.12-slim
 
 WORKDIR /app
@@ -18,8 +18,8 @@ COPY apps/agent/agent.py apps/agent/logic.py apps/agent/memory_substrate.py \
      apps/agent/contacts_substrate.py apps/agent/state_bus.py \
      apps/agent/vision_analyze.py apps/agent/transcription_substrate.py ./
 
-# Copy shared myconf package from repo root
-COPY myconf/ /app/myconf/
+# Copy shared teleconference_mcp package from repo root
+COPY teleconference_mcp/ /app/teleconference_mcp/
 
 # LiveKit URL and keys set at runtime.
 # Ollama runs OUTSIDE Docker on the host PC; agent reaches it via host.docker.internal.

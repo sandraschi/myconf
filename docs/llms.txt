@@ -1,4 +1,4 @@
-# AG-Visio / myconf
+# Teleconference MCP
 > Self-hosted video conferencing with AI voice agent. Built on LiveKit, Turborepo, FastMCP 3.2.
 
 ## Key files

@@ -1,4 +1,4 @@
-# myconf — TODO (from 2026-06-12 assessment)
+# teleconference-mcp — TODO (from 2026-06-12 assessment)
 
 Fix order matters. Total ≈ one focused day. See ASSESSMENT.md for full detail.
 

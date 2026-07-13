@@ -1,4 +1,4 @@
-# AG-Visio Technical Reference
+# Teleconference MCP — Technical Reference
 
 > **This document covers protocol internals and deep implementation details.**
 > For architecture overview, see [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
@@ -101,7 +101,7 @@ conference_participants (id, conference_id, identity,
 
 ## 8. Health Monitoring
 
-All services use the shared `myconf.health` module:
+All services use the shared `teleconference_mcp.health` module:
 
 - `check_tcp_port(host, port)` — TCP connectivity probe
 - `check_ollama()` — Ollama /api/tags endpoint

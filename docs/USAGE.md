@@ -295,6 +295,6 @@ environment:
 | Agent not responding | Ollama not running | Check `ollama serve`, verify model installed |
 | MCP server unreachable | Port conflict | `just clean` then restart |
 | Screen share black | GPU driver issue | Update graphics drivers |
-| `uv run -m myconf` fails | Dependencies missing | Run `uv sync` |
+| `uv run -m teleconference_mcp` fails | Dependencies missing | Run `uv sync` |
 | Can't find contacts | Outlook not configured | Contacts are read from Windows Address Book |
 | Tests failing | LanceDB version mismatch | Run `uv sync --reinstall` |

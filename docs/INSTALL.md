@@ -68,10 +68,10 @@ LIVEKIT_API_SECRET=secret
 ### Or start individual services:
 
 ```powershell
-uv run -m myconf conferencing   # MCP server (port 10720)
-uv run -m myconf remoting       # Remoting MCP (port 10725)
-uv run -m myconf agent          # AI agent (port 10887)
-uv run -m myconf web            # Dashboard (port 10886)
+uv run -m teleconference_mcp conferencing   # MCP server (port 10720)
+uv run -m teleconference_mcp remoting       # Remoting MCP (port 10725)
+uv run -m teleconference_mcp agent          # AI agent (port 10887)
+uv run -m teleconference_mcp web            # Dashboard (port 10886)
 ```
 
 ### Using Just:
@@ -146,7 +146,7 @@ All 44 tests should pass.
 
 | Problem | Check |
 |---------|-------|
-| `uv run -m myconf` fails | Run `uv sync` first |
+| `uv run -m teleconference_mcp` fails | Run `uv sync` first |
 | LiveKit unreachable | `docker compose ps` to verify containers |
 | Ollama not responding | `ollama serve` and `ollama list` |
 | Port conflicts | Check `netstat -ano \| findstr :10886` and kill zombie processes |

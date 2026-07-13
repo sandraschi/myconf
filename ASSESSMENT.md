@@ -1,4 +1,4 @@
-# AG-Visio / myconf — Project Health Assessment
+# Teleconference MCP — Project Health Assessment
 
 **Date:** 2026-06-12
 **Version:** 2.2.0 (pyproject) / 2.3.0 (CHANGELOG, unreleased)

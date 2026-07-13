@@ -9,7 +9,7 @@ $WindowStyle = if ($Headless) { 'Hidden' } else { 'Normal' }
 # ------------------------------
 
 # Sandra Schipal | SOTA 2026 | Webapp Startup Protocol (Production)
-# Port: 10886 (myconf frontend)
+# Port: 10886 (teleconference-mcp frontend)
 
 $WebPort = 10886
 $FleetStartPath = Join-Path $ProjectRoot "scripts\FleetStartMode.ps1"

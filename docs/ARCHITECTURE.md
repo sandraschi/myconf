@@ -2,7 +2,7 @@
 
 ## Overview
 
-AG-Visio is a **service-oriented monorepo** combining WebRTC (LiveKit), local-first AI (Ollama), MCP-based tool orchestration, Windows-native remoting, and full observability. All services run as Docker containers or local processes.
+Teleconference MCP is a **service-oriented monorepo** combining WebRTC (LiveKit), local-first AI (Ollama), MCP-based tool orchestration, Windows-native remoting, and full observability.
 
 ## Docker Stack (8 containers)
 
@@ -150,10 +150,10 @@ Discovered tools are registered dynamically in `CombinedMCPFunctionContext` and 
 ## Directory Layout
 
 ```
-myconf/
-├── myconf/                         # Python package (entry point)
-│   ├── __init__.py
-│   ├── __main__.py                 # uv run -m myconf [service]
+teleconference_mcp/
+├── teleconference_mcp/               # Python package (entry point)
+│   ├── __init__.py                   # (empty)
+│   ├── __main__.py                   # uv run -m teleconference_mcp [service]
 │   └── health.py                   # Shared health check utilities
 ├── apps/
 │   ├── agent/                      # Visio AI voice agent

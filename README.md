@@ -1,4 +1,4 @@
-# myconf (AG-Visio / Teams++)
+# Teleconference MCP (AG-Visio / Teams++)
 
 <p align="center">
   <a href="https://github.com/casey/just"><img src="https://img.shields.io/badge/just-ready_to_go-7c5cfc?style=flat-square&logo=just&logoColor=white" alt="Just"></a>

@@ -1,6 +1,6 @@
-# Contributing to myconf
+# Contributing to teleconference-mcp
 
-**Welcome!** This guide outlines the modern development standards and processes for the myconf monorepo.
+**Welcome!** This guide outlines the modern development standards and processes for the teleconference-mcp monorepo.
 
 ---
 
