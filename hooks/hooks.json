@@ -1,0 +1,11 @@
+{
+  "hooks": {
+    "SessionStart": [{
+      "matcher": "",
+      "hooks": [{
+        "type": "text",
+        "text": "## Session Context (Teleconference MCP)\n\nSelf-hosted AI-powered video conferencing with LiveKit WebRTC, voice agent, and\nremote desktop control. 30+ MCP tools across scheduling, room management, meeting\nintelligence, diagnostics, and inter-agent signaling.\n\n**Before starting work:**\n1. Check system health: get_substrate_heartbeat()\n2. List active conferences: list_active_conferences()\n3. Check upcoming meetings: conference_upcoming(days=7)\n\n**At end of work:**\n- Cancel stale rooms with room_delete(name=\"...\")\n- Persist meeting insights via generate_meeting_summary()\n- Log notable events for forensics"
+      }]
+    }]
+  }
+}

@@ -1,0 +1,119 @@
+# Teleconference MCP — LLM Full Reference
+
+## Overview
+Self-hosted AI-powered video conferencing platform with LiveKit WebRTC, voice agent, and remote desktop control. 30+ MCP tools across scheduling, room management, meeting intelligence, diagnostics, and inter-agent signaling.
+
+## Quick Start
+```bash
+uv sync --dev
+uv run teleconference-mcp conferencing   # Start MCP server (port 10720)
+cd apps/web && npm ci && npm run dev     # Start dashboard (port 10886)
+```
+
+Stack: Python 3.12+, FastMCP 3.4+, Next.js 16, LiveKit 1.12, Turborepo, Ruff lint.
+
+## Architecture
+- `teleconference_mcp/` — Entry point + shared health utilities
+- `apps/web/` — Next.js 16 dashboard (port 10886)
+- `apps/agent/` — LiveKit voice agent pipeline (Silero VAD → Whisper → Ollama → Piper TTS)
+- `packages/conferencing_mcp/` — 25 MCP tools (conferences, rooms, intelligence, diagnostics, signaling)
+- `packages/remoting_mcp/` — 8 MCP tools (screen capture, mouse/keyboard, join/leave meetings)
+- `tests/` — 95 pytest tests (68 conferencing + 27 agent)
+- `native/` — Tauri 2.0 NSIS wrapper (untracked, in progress)
+
+## Ports
+| Service | Port |
+|---------|------|
+| Web dashboard | 10886 |
+| Conferencing MCP | 10720 |
+| Health/Diagnostics | 10721 |
+| Remoting MCP | 10725 |
+| AI Agent | 10887 |
+| LiveKit WS | 15580 |
+| LiveKit WebRTC | 15581 |
+| LiveKit UDP | 15582 |
+| Redis (Docker) | 16379 |
+| Grafana | 13000 |
+| Loki | 13100 |
+| Prometheus | 19090 |
+
+## MCP Tools
+
+### Conferences (9 tools)
+- `conference_schedule(title, scheduled_at, organizer, ...)` — Schedule a conference
+- `conference_get(conference_id)` — Fetch single conference
+- `conference_list(status, after, before, limit)` — List with filters
+- `conference_update(conference_id, ...)` — Update mutable fields
+- `conference_cancel(conference_id)` — Cancel scheduled conference
+- `conference_upcoming(days)` — List upcoming conferences
+- `participant_invite(conference_id, identity, role)` — Invite participant
+- `participant_list_invited(conference_id)` — List invited participants
+- `participant_remove_invited(conference_id, identity)` — Remove invitation
+
+### Rooms (8 tools)
+- `room_create(name, max_participants, empty_timeout, metadata)` — Create LiveKit room
+- `room_list(filter_names)` — List active rooms
+- `room_delete(name)` — Delete room (kicks all participants)
+- `room_update_metadata(name, metadata)` — Update room metadata
+- `room_participant_list(room_name)` — List live participants
+- `room_participant_kick(room_name, identity)` — Kick participant
+- `room_participant_mute(room_name, identity, track_sid, muted)` — Mute/unmute track
+- `room_send_data(room_name, data, destination_identities)` — Send data message
+
+### Intelligence (3 tools)
+- `generate_meeting_summary(room_name, transcript)` — Summarize transcript with LLM, persist to LanceDB
+- `extract_action_items(room_name, transcript)` — Extract action items, persist to LanceDB
+- `set_translation_language(language)` — Set live translation target
+
+### Diagnostics (7 tools)
+- `get_dev_stats()` — Git/disk local dev stats
+- `query_system_logs(pattern, limit)` — Windows Event Log search
+- `sample_log_analysis(pattern, iterations)` — Iterative log sampling
+- `get_substrate_heartbeat()` — LiveKit + Ollama + system health
+- `orchestrate_industrial_diagnostics()` — Full diagnostic pass
+- `orchestrate_remote_support(action)` — RustDesk remote support
+- `sample_system_forensics(anomaly)` — LLM forensics analysis
+
+### Signaling (3 tools)
+- `list_active_conferences()` — LiveKit rooms + scheduled conferences
+- `notify_conference_active(room_id, participant_count)` — Inter-agent signal
+- `inter_agent_ping(target_agent)` — Heartbeat broadcast
+
+## Environment Variables
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `LIVEKIT_API_KEY` | — | LiveKit API key |
+| `LIVEKIT_API_SECRET` | — | LiveKit API secret |
+| `LIVEKIT_URL` | `ws://localhost:15580` | LiveKit server URL |
+| `MCP_PORT` | `10720` | HTTP transport port |
+| `MCP_HOST` | `127.0.0.1` | HTTP transport host |
+| `MCP_BRIDGE_URLS` | — | Comma-separated MCP proxy URLs |
+| `TELECONFERENCE_TAURI` | — | Set by Tauri wrapper |
+| `FASTMCP_LOG_LEVEL` | `WARNING` | Log level for FastMCP |
+| `OLLAMA_HOST` | `http://localhost:11434` | Ollama server URL |
+| `AUTH_DISABLED` | — | Set to `true` to skip OIDC auth |
+| `AUTHENTIK_URL` | — | Authentik OIDC issuer |
+| `AUTH_SECRET` | — | NextAuth secret |
+
+## External Dependencies
+- **LiveKit** (v1.12+): WebRTC SFU server for real-time video/audio
+- **Ollama** (optional): Local LLM for meeting intelligence (ctx.sample)
+- **RustDesk** (optional): Remote desktop support
+- **Redis** (optional): Agent state bus
+- **Authentik** (optional): OIDC authentication
+
+## Testing
+```bash
+uv run pytest tests/          # 68 conferencing tests
+uv run pytest apps/agent/tests/  # 27 agent tests
+uv run ruff check             # SOTA 2026 lint (120-char, double quotes)
+```
+
+All tools use Annotated[Field()] parameters, ## Return Format, ## Examples in docstrings.
+
+## Troubleshooting
+- **"LiveKit not reachable"**: Ensure livekit-server is running on port 15580
+- **"Conference DB locked"**: Remove `packages/conferencing_mcp/conference.db` and restart
+- **"Ollama not found"**: Install Ollama or set `OLLAMA_HOST` — tools degrade gracefully
+- **"MCP server won't start on port 10720"**: Clear zombie: `Get-NetTCPConnection -LocalPort 10720 | Stop-Process`
+- **CI fails on Linux**: Windows-only deps (pywin32, pywinctl, pynput, mss) have `sys_platform == 'win32'` markers

@@ -1,0 +1,15 @@
+## Session Context (Teleconference MCP)
+
+Self-hosted AI-powered video conferencing with LiveKit WebRTC, voice agent, and
+remote desktop control. 30+ MCP tools across scheduling, room management, meeting
+intelligence, diagnostics, and inter-agent signaling.
+
+**Before starting work:**
+1. Check system health: get_substrate_heartbeat()
+2. List active conferences: list_active_conferences()
+3. Check upcoming meetings: conference_upcoming(days=7)
+
+**At end of work:**
+- Cancel stale rooms with room_delete(name="...")
+- Persist meeting insights via generate_meeting_summary()
+- Log notable events for forensics
