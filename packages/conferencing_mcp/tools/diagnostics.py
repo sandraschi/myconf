@@ -7,12 +7,12 @@ from typing import Annotated, Any
 from fastmcp import Context
 from pydantic import Field
 
-from ..mcp_server import cid, mcp
+from ..mcp_server import _MUTATING, _READ_ONLY, cid, mcp
 
 logger = logging.getLogger("ag-visio-mcp")
 
 
-@mcp.tool()
+@mcp.tool(annotations=_READ_ONLY)
 async def get_dev_stats(ctx: Context) -> str:
     """Get granular local development statistics. SOTA Industrial standard.
 
@@ -61,7 +61,7 @@ async def get_dev_stats(ctx: Context) -> str:
         return f"ERROR [SOTA-E01]: Substrate telemetry failed. {e!s}"
 
 
-@mcp.tool()
+@mcp.tool(annotations=_READ_ONLY)
 async def query_system_logs(
     ctx: Context,
     pattern: Annotated[str, Field(description="Regex pattern to match in system log messages.")],
@@ -95,7 +95,7 @@ async def query_system_logs(
         return "CRITICAL FAILURE: Log substrate unavailable."
 
 
-@mcp.tool()
+@mcp.tool(annotations=_READ_ONLY)
 async def sample_log_analysis(
     ctx: Context,
     pattern: Annotated[str, Field(description="Log pattern to iteratively sample.")],
@@ -138,7 +138,7 @@ async def sample_log_analysis(
     }
 
 
-@mcp.tool()
+@mcp.tool(annotations=_READ_ONLY)
 async def get_substrate_heartbeat(ctx: Context) -> dict[str, Any]:
     """Perform deep heartbeat analysis of LiveKit and Ollama substrates.
 
@@ -201,7 +201,7 @@ async def get_substrate_heartbeat(ctx: Context) -> dict[str, Any]:
     }
 
 
-@mcp.tool()
+@mcp.tool(annotations=_READ_ONLY)
 async def orchestrate_industrial_diagnostics(ctx: Context) -> dict[str, Any]:
     """Execute a full-stack industrial diagnostic pass. SOTA-2026 methodology.
 
@@ -225,7 +225,7 @@ async def orchestrate_industrial_diagnostics(ctx: Context) -> dict[str, Any]:
     }
 
 
-@mcp.tool()
+@mcp.tool(annotations=_MUTATING)
 async def orchestrate_remote_support(
     ctx: Context,
     action: Annotated[
@@ -310,7 +310,7 @@ async def orchestrate_remote_support(
     return {"success": False, "error": f"Unknown action: {action}"}
 
 
-@mcp.tool()
+@mcp.tool(annotations=_READ_ONLY)
 async def sample_system_forensics(
     ctx: Context,
     anomaly: Annotated[str, Field(description="Description of the system anomaly to investigate.")],

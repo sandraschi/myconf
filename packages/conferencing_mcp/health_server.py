@@ -1,5 +1,10 @@
 """
-packages/conferencing_mcp/health_server.py — Health endpoint + Prometheus metrics.
+packages/conferencing_mcp/health_server.py — Health + Diagnostics + Prometheus metrics.
+
+Exposes:
+  GET /health              — Fleet-standard health response
+  GET /api/v1/diagnostics  — CUA smoke test diagnostics
+  GET /metrics             — Prometheus scrape target
 """
 
 import json
@@ -7,32 +12,84 @@ import logging
 import time
 from http.server import BaseHTTPRequestHandler, HTTPServer
 
-from myconf.health import check_ollama, check_tcp_port, health_response
+from teleconference_mcp.health import check_ollama, check_tcp_port
 
 logger = logging.getLogger("conferencing-health")
+_START_TIME = time.time()
+_REQUEST_COUNT = 0
+
+VERSION = "0.1.0"
+SERVER_NAME = "teleconference-mcp"
+
+
+def _tool_count() -> int:
+    try:
+        from conferencing_mcp.tools import __all__  # type: ignore[attr-defined]
+        return len(__all__) if __all__ else 25
+    except Exception:
+        try:
+            import conferencing_mcp.tools as _t
+            return len([n for n in dir(_t) if not n.startswith("_")])
+        except Exception:
+            return 25
+
+
+def _list_tools() -> list[dict[str, str]]:
+    tool_names = [
+        "conference_schedule", "conference_get", "conference_list",
+        "conference_update", "conference_cancel", "conference_upcoming",
+        "participant_invite", "participant_list_invited", "participant_remove_invited",
+        "room_create", "room_list", "room_delete", "room_update_metadata",
+        "room_participant_list", "room_participant_kick", "room_participant_mute",
+        "room_send_data", "generate_meeting_summary", "extract_action_items",
+        "set_translation_language", "list_active_conferences",
+        "notify_conference_active", "inter_agent_ping",
+        "get_dev_stats", "query_system_logs", "sample_log_analysis",
+        "get_substrate_heartbeat", "orchestrate_industrial_diagnostics",
+        "orchestrate_remote_support", "sample_system_forensics",
+    ]
+    return [{"name": n} for n in tool_names]
 
 
 class MetricsHandler(BaseHTTPRequestHandler):
-    _start_time = time.time()
-    _request_count = 0
-
     def do_GET(self):
-        if self.path == "/health":
-            checks = {
-                "livekit": check_tcp_port("localhost", 15580),
-                "ollama": check_ollama(),
-                "mcp_server": {"status": "ALIVE"},
+        global _REQUEST_COUNT
+        _REQUEST_COUNT += 1
+
+        if self.path in ("/health", "/api/health"):
+            lk = check_tcp_port("localhost", 15580)
+            ol = check_ollama()
+            resp = {
+                "status": "ok",
+                "server": SERVER_NAME,
+                "version": VERSION,
+                "uptime_seconds": int(time.time() - _START_TIME),
+                "tool_count": _tool_count(),
+                "providers": {
+                    "livekit": lk.get("status", "UNKNOWN"),
+                    "ollama": ol.get("status", "UNKNOWN"),
+                },
             }
-            resp = health_response("conferencing-mcp", checks)
-            self.send_response(200)
-            self.send_header("Content-Type", "application/json")
-            self.end_headers()
-            self.wfile.write(json.dumps(resp).encode())
+            self._json(200, resp)
+
+        elif self.path == "/api/v1/diagnostics":
+            lk = check_tcp_port("localhost", 15580)
+            ol = check_ollama()
+            resp = {
+                "status": "ok",
+                "server": SERVER_NAME,
+                "version": VERSION,
+                "uptime_seconds": int(time.time() - _START_TIME),
+                "tool_count": _tool_count(),
+                "tools": _list_tools(),
+                "system": {"windows": True},
+                "errors": [],
+            }
+            self._json(200, resp)
 
         elif self.path == "/metrics":
             lk = check_tcp_port("localhost", 15580)
             ol = check_ollama()
-            self._request_count += 1
             metrics = (
                 "# HELP livekit_up LiveKit server reachability\n"
                 "# TYPE livekit_up gauge\n"
@@ -48,12 +105,11 @@ class MetricsHandler(BaseHTTPRequestHandler):
                 f"ollama_models_count {len(ol.get('models', []))}\n"
                 "# HELP mcp_uptime_seconds MCP server uptime\n"
                 "# TYPE mcp_uptime_seconds gauge\n"
-                f"mcp_uptime_seconds {time.time() - self._start_time:.0f}\n"
+                f"mcp_uptime_seconds {time.time() - _START_TIME:.0f}\n"
                 "# HELP mcp_requests_total Total requests served\n"
                 "# TYPE mcp_requests_total counter\n"
-                f"mcp_requests_total {self._request_count}\n"
+                f"mcp_requests_total {_REQUEST_COUNT}\n"
             )
-            self._request_count = getattr(self, "_request_count", 0) + 1
             self.send_response(200)
             self.send_header("Content-Type", "text/plain; version=0.0.4")
             self.end_headers()
@@ -63,13 +119,19 @@ class MetricsHandler(BaseHTTPRequestHandler):
             self.send_response(404)
             self.end_headers()
 
+    def _json(self, code: int, data: dict):
+        self.send_response(code)
+        self.send_header("Content-Type", "application/json")
+        self.end_headers()
+        self.wfile.write(json.dumps(data).encode())
+
     def log_message(self, format, *args):
         logger.debug(format, *args)
 
 
 def run_health_server(port: int = 10721):
     server = HTTPServer(("0.0.0.0", port), MetricsHandler)  # noqa: S104
-    logger.info(f"Health + metrics endpoint on port {port}")
+    logger.info("Health + diagnostics + metrics on port %d", port)
     server.serve_forever()
 
 

@@ -5,12 +5,12 @@ from fastmcp import Context
 from pydantic import Field
 
 from .. import conference as conf
-from ..mcp_server import cid, mcp
+from ..mcp_server import _MUTATING, _READ_ONLY, cid, mcp
 
 logger = logging.getLogger("ag-visio-mcp")
 
 
-@mcp.tool()
+@mcp.tool(annotations=_MUTATING)
 async def room_create(
     ctx: Context,
     name: Annotated[str, Field(description="Room name (unique identifier).")],
@@ -35,7 +35,7 @@ async def room_create(
         return {"error": str(exc)}
 
 
-@mcp.tool()
+@mcp.tool(annotations=_READ_ONLY)
 async def room_list(
     ctx: Context,
     filter_names: Annotated[str, Field(description="Comma-separated room names to filter by (empty = all).")] = "",
@@ -56,7 +56,7 @@ async def room_list(
         return [{"error": str(exc)}]
 
 
-@mcp.tool()
+@mcp.tool(annotations=_MUTATING)
 async def room_delete(
     ctx: Context,
     name: Annotated[str, Field(description="Room name to delete. Kicks all participants.")],
@@ -77,7 +77,7 @@ async def room_delete(
         return {"error": str(exc)}
 
 
-@mcp.tool()
+@mcp.tool(annotations=_MUTATING)
 async def room_update_metadata(
     ctx: Context,
     name: Annotated[str, Field(description="Room name to update.")],
@@ -99,7 +99,7 @@ async def room_update_metadata(
         return {"error": str(exc)}
 
 
-@mcp.tool()
+@mcp.tool(annotations=_READ_ONLY)
 async def room_participant_list(
     ctx: Context,
     room_name: Annotated[str, Field(description="LiveKit room name to inspect.")],
@@ -118,7 +118,7 @@ async def room_participant_list(
         return [{"error": str(exc)}]
 
 
-@mcp.tool()
+@mcp.tool(annotations=_MUTATING)
 async def room_participant_kick(
     ctx: Context,
     room_name: Annotated[str, Field(description="Target room.")],
@@ -138,7 +138,7 @@ async def room_participant_kick(
         return {"error": str(exc)}
 
 
-@mcp.tool()
+@mcp.tool(annotations=_MUTATING)
 async def room_participant_mute(
     ctx: Context,
     room_name: Annotated[str, Field(description="Target room.")],
@@ -161,7 +161,7 @@ async def room_participant_mute(
         return {"error": str(exc)}
 
 
-@mcp.tool()
+@mcp.tool(annotations=_MUTATING)
 async def room_send_data(
     ctx: Context,
     room_name: Annotated[str, Field(description="Target room.")],

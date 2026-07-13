@@ -5,12 +5,12 @@ from fastmcp import Context
 from pydantic import Field
 
 from .. import conference as conf
-from ..mcp_server import cid, mcp
+from ..mcp_server import _MUTATING, _READ_ONLY, cid, mcp
 
 logger = logging.getLogger("ag-visio-mcp")
 
 
-@mcp.tool()
+@mcp.tool(annotations=_READ_ONLY)
 async def list_active_conferences(ctx: Context) -> dict:
     """List active LiveKit rooms and scheduled conferences.
 
@@ -38,7 +38,7 @@ async def list_active_conferences(ctx: Context) -> dict:
     }
 
 
-@mcp.tool()
+@mcp.tool(annotations=_MUTATING)
 async def notify_conference_active(
     ctx: Context,
     room_id: Annotated[str, Field(description="LiveKit room identifier.")],
@@ -62,7 +62,7 @@ async def notify_conference_active(
     )
 
 
-@mcp.tool()
+@mcp.tool(annotations=_MUTATING)
 async def inter_agent_ping(
     ctx: Context,
     target_agent: Annotated[str, Field(description="Target agent name or 'ALL' for broadcast.")] = "ALL",

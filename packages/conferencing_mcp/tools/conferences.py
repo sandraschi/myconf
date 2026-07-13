@@ -6,12 +6,12 @@ from fastmcp import Context
 from pydantic import Field
 
 from .. import conference as conf
-from ..mcp_server import cid, mcp
+from ..mcp_server import _MUTATING, _READ_ONLY, cid, mcp
 
 logger = logging.getLogger("ag-visio-mcp")
 
 
-@mcp.tool()
+@mcp.tool(annotations=_MUTATING)
 async def conference_schedule(
     ctx: Context,
     title: Annotated[str, Field(description="Conference title.")],
@@ -44,7 +44,7 @@ async def conference_schedule(
     )
 
 
-@mcp.tool()
+@mcp.tool(annotations=_READ_ONLY)
 async def conference_get(
     ctx: Context,
     conference_id: Annotated[str, Field(description="Conference UUID.")],
@@ -63,7 +63,7 @@ async def conference_get(
         return {"error": str(exc)}
 
 
-@mcp.tool()
+@mcp.tool(annotations=_READ_ONLY)
 async def conference_list(
     ctx: Context,
     status: Annotated[
@@ -91,7 +91,7 @@ async def conference_list(
     )
 
 
-@mcp.tool()
+@mcp.tool(annotations=_MUTATING)
 async def conference_update(
     ctx: Context,
     conference_id: Annotated[str, Field(description="Conference UUID.")],
@@ -132,7 +132,7 @@ async def conference_update(
         return {"error": str(exc)}
 
 
-@mcp.tool()
+@mcp.tool(annotations=_MUTATING)
 async def conference_cancel(
     ctx: Context,
     conference_id: Annotated[str, Field(description="Conference UUID to cancel.")],
@@ -151,7 +151,7 @@ async def conference_cancel(
         return {"error": str(exc)}
 
 
-@mcp.tool()
+@mcp.tool(annotations=_READ_ONLY)
 async def conference_upcoming(
     ctx: Context,
     days: Annotated[int, Field(description="Lookahead window in days.", ge=1)] = 7,
@@ -170,7 +170,7 @@ async def conference_upcoming(
     return conf.list_conferences(status="SCHEDULED", after=now, before=horizon)
 
 
-@mcp.tool()
+@mcp.tool(annotations=_MUTATING)
 async def participant_invite(
     ctx: Context,
     conference_id: Annotated[str, Field(description="Conference UUID.")],
@@ -193,7 +193,7 @@ async def participant_invite(
         return [{"error": str(exc)}]
 
 
-@mcp.tool()
+@mcp.tool(annotations=_READ_ONLY)
 async def participant_list_invited(
     ctx: Context,
     conference_id: Annotated[str, Field(description="Conference UUID.")],
@@ -209,7 +209,7 @@ async def participant_list_invited(
     return conf.list_invited_participants(conference_id)
 
 
-@mcp.tool()
+@mcp.tool(annotations=_MUTATING)
 async def participant_remove_invited(
     ctx: Context,
     conference_id: Annotated[str, Field(description="Conference UUID.")],

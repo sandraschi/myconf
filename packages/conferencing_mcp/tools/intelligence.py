@@ -5,12 +5,12 @@ from typing import Annotated, Any
 from fastmcp import Context
 from pydantic import Field
 
-from ..mcp_server import cid, db, embedding_model, mcp
+from ..mcp_server import _MUTATING, cid, db, embedding_model, mcp
 
 logger = logging.getLogger("ag-visio-mcp")
 
 
-@mcp.tool()
+@mcp.tool(annotations=_MUTATING)
 async def generate_meeting_summary(
     ctx: Context,
     room_name: Annotated[str, Field(description="Name of the active LiveKit room.")],
@@ -58,7 +58,7 @@ async def generate_meeting_summary(
         return {"success": False, "error": str(e)}
 
 
-@mcp.tool()
+@mcp.tool(annotations=_MUTATING)
 async def extract_action_items(
     ctx: Context,
     room_name: Annotated[str, Field(description="Name of the active LiveKit room.")],
@@ -109,7 +109,7 @@ async def extract_action_items(
         return {"success": False, "error": str(e)}
 
 
-@mcp.tool()
+@mcp.tool(annotations=_MUTATING)
 async def set_translation_language(
     ctx: Context,
     language: Annotated[str, Field(description="Target language, e.g. 'Japanese', 'German', 'Spanish'.")],

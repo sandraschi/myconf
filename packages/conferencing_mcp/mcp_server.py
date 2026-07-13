@@ -36,7 +36,10 @@ def cid(ctx) -> str:
     return getattr(ctx, "correlation_id", "GLOBAL")
 
 
-mcp = FastMCP("conferencing-mcp", version="3.1.2")
+mcp = FastMCP("teleconference-mcp", version="3.1.2")
+
+_READ_ONLY = {"readonly": True}
+_MUTATING = {}
 
 # MCP Bridge: ProxyProvider for multi-server federation
 _bridge_urls = os.getenv("MCP_BRIDGE_URLS", "")

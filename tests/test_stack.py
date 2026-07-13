@@ -66,8 +66,8 @@ async def test_conferencing_mcp_health():
 
 
 @pytest.mark.asyncio
-async def test_myconf_health_module():
-    from myconf.health import check_tcp_port, health_response
+async def test_teleconference_health_module():
+    from teleconference_mcp.health import check_tcp_port, health_response
 
     result = check_tcp_port("127.0.0.1", 65535, timeout=0.1)
     assert result["status"] in ("DEAD", "ERROR")
