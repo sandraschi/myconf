@@ -1,10 +1,10 @@
-# AG-Visio / myconf — Agent Instructions
+# Teleconference MCP — Agent Instructions
 
 ## Identity
-You are working on **AG-Visio (Teams++)**, a self-hosted video conferencing platform with AI voice assistant, built on LiveKit and Turborepo.
+You are working on **Teleconference MCP**, a self-hosted video conferencing platform with AI voice assistant, built on LiveKit and Turborepo.
 
 ## Repo Structure
-- `myconf/` — Entry point & health utilities
+- `teleconference_mcp/` — Entry point & health utilities
 - `apps/agent/` — Visio AI voice agent (Python, livekit-agents)
 - `apps/web/` — Next.js 16 dashboard (port 10886)
 - `packages/conferencing_mcp/` — FastMCP 3.2 server with 25 tools in 5 modules (`tools/`)

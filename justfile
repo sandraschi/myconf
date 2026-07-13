@@ -1,4 +1,5 @@
-﻿set windows-shell := ["pwsh.exe", "-NoLogo", "-Command"]
+set windows-shell := ["pwsh.exe", "-NoLogo", "-Command"]
+import 'scripts/just/fleet.just'
 
 # ── Dashboard ─────────────────────────────────────────────────────────────────
 
@@ -21,8 +22,7 @@ conferencing:
 # Launch the Visio AI agent
 agent:
     Set-Location '{{justfile_directory()}}/apps/agent'
-    .\venv\Scripts\activate; \
-    python agent.py dev
+    uv run python agent.py dev
 
 # Launch the Next.js dashboard (production)
 web:
@@ -39,13 +39,13 @@ build-web:
 # Execute Ruff SOTA v13.1 linting across monorepo
 lint:
     Set-Location '{{justfile_directory()}}'
-    uv run ruff check apps/ packages/ myconf/ tests/
+    uv run ruff check apps/ packages/ teleconference_mcp/ tests/
 
 # Execute Ruff SOTA v13.1 fix and formatting
 fix:
     Set-Location '{{justfile_directory()}}'
-    uv run ruff check apps/ packages/ myconf/ tests/ --fix --unsafe-fixes; \
-    uv run ruff format apps/ packages/ myconf/ tests/
+    uv run ruff check apps/ packages/ teleconference_mcp/ tests/ --fix --unsafe-fixes; \
+    uv run ruff format apps/ packages/ teleconference_mcp/ tests/
 
 # Run pytest across monorepo
 test:
@@ -55,7 +55,7 @@ test:
 # Run mypy type checking
 typecheck:
     Set-Location '{{justfile_directory()}}'
-    uv run mypy apps/ packages/ myconf/ --ignore-missing-imports
+    uv run mypy apps/ packages/ teleconference_mcp/ --ignore-missing-imports
 
 # Sync all Python dependencies
 install:
@@ -88,4 +88,3 @@ clean:
 setup:
     Set-Location '{{justfile_directory()}}'
     .\setup.ps1
-

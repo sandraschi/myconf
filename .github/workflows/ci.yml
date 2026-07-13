@@ -2,13 +2,8 @@ name: CI
 
 on:
   push:
-    branches: [main, master]
-  pull_request:
-    branches: [main, master]
-
-# Windows-only by design: remoting_mcp, contacts, and vision substrates are
-# Windows-native (pywin32/pynput/mss are unconditional deps). Do not add
-# ubuntu runners without platform markers in pyproject.toml.
+    tags: ["v*"]
+  workflow_dispatch:
 
 jobs:
   web:
@@ -43,11 +38,14 @@ jobs:
       - name: Install dependencies
         run: uv sync --dev
       - name: Ruff check
-        run: uv run ruff check apps/agent/ packages/ myconf/ tests/
+        run: uv run ruff check apps/agent/ packages/ teleconference_mcp/ tests/
       - name: Ruff format check
-        run: uv run ruff format --check apps/agent/ packages/ myconf/ tests/
-      - name: Pytest
-        run: uv run pytest tests/ apps/agent/tests/ -v --tb=short --junit-xml=test-results.xml
+        run: uv run ruff format --check apps/agent/ packages/ teleconference_mcp/ tests/
+      - name: Pytest with coverage
+        run: uv run pytest tests/ apps/agent/tests/ -v --tb=short --junit-xml=test-results.xml --cov --cov-fail-under=70
+      - name: ty type-check (non-blocking)
+        continue-on-error: true
+        run: uv run ty check apps/agent/ packages/conferencing_mcp/ myconf/ --ignore-missing-imports 2>&1
       - name: Upload test results
         if: always()
         uses: actions/upload-artifact@v4

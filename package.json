@@ -1,5 +1,5 @@
 {
-  "name": "myconf",
+  "name": "@fleet/teleconference-mcp",
   "private": true,
   "scripts": {
     "build": "turbo run build",

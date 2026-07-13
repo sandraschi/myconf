@@ -1,10 +1,10 @@
-# myconf — Claude Code Guide
+# teleconference-mcp — Claude Code Guide
 
 ## Overview
-AG-Visio / Teams++ — AI-powered video conferencing with voice assistant and remote desktop
+Teleconference MCP — AI-powered video conferencing with LiveKit WebRTC, voice agent, and remote desktop control
 
 ## Entry Points
-- `uv run myconf` → `myconf.__main__:main`
+- `uv run teleconference-mcp` → `teleconference_mcp.__main__:main`
 
 ## Standards
 - FastMCP 3.2+ portmanteau tool pattern — tools use `operation` enum param
